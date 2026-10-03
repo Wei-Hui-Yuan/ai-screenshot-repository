@@ -1,4 +1,12 @@
 # Handoff 03: Spike locked, backend and UI built
+
+> **Record.** Written at the end of the build session and not edited since, apart from this note. Since then:
+> - the final test count is 291, not 278, and corrections #29–#33 are now Confirmed. See [02-mvp-outcome.md](../project_plan/02-mvp-outcome.md);
+> - `projectplan.md` was renamed to [`project_plan/01-full-plan.md`](../project_plan/01-full-plan.md), and `phase_plans/mvp.md` became `02-mvp-outcome.md`;
+> - the proposed `agents.md` update was made (commit `02a32b3`).
+>
+> The `.env` model problem is covered under "Where the build departed from the approved plan" in `02-mvp-outcome.md`, and the remaining to-dos under "Limits and open items".
+
 Date: 2026-10-03
 Goal: Finish the phase 1 spike, cut scope for speed, and build the MVP (phases 2–5 merged, see `planning/project_plan/02-mvp-outcome.md`).
 

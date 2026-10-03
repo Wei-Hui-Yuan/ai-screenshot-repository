@@ -1,4 +1,7 @@
 # Handoff 01: Planning
+
+> **Record.** Written at the end of the planning session and not edited since, apart from this note. Since then, `projectplan.md` was renamed to [`project_plan/01-full-plan.md`](../project_plan/01-full-plan.md) with the same section numbers, and the three questions listed as open below were resolved (see §11 there).
+
 Date: 2026-10-03
 Goal: Turn the assessment brief into a scoped project and the planning docs the build will follow.
 

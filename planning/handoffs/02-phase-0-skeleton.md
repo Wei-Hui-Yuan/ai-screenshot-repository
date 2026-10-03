@@ -1,4 +1,7 @@
 # Handoff 02: Phase 0 skeleton
+
+> **Record.** Written at the end of the phase 0 session and not edited since, apart from this note. Since then, `projectplan.md` was renamed to [`project_plan/01-full-plan.md`](../project_plan/01-full-plan.md) with the same section numbers, and the questions listed as open below were resolved (see §11 there).
+
 Date: 2026-10-03
 Goal: Finish phase 0 (projectplan §9): git repo, runnable skeleton, `.gitignore`, `.env.example`, `requirements.txt`.
 
