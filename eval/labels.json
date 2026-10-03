@@ -1,0 +1,38 @@
+{
+  "20251221_084931.jpg": {
+    "city": null,
+    "country": null,
+    "category": "travel",
+    "contains_personal_info": false,
+    "queries": ["arch", "monument"]
+  },
+  "20251216_163345.jpg": {
+    "city": null,
+    "country": null,
+    "category": "travel",
+    "contains_personal_info": false,
+    "queries": ["cathedral", "church"]
+  },
+  "20231211_095541.jpg": {
+    "city": "Manhattan Beach",
+    "country": null,
+    "category": "other",
+    "contains_personal_info": false,
+    "queries": ["manhattan beach", "free parking"]
+  },
+  "20231210_214345.jpg": {
+    "city": null,
+    "country": null,
+    "category": "food",
+    "contains_personal_info": false,
+    "queries": ["pizza", "pepperoni"]
+  },
+  "codex-clipboard-41afb2e8-8c57-40bf-8aed-9c94353f25e3.png": {
+    "city": null,
+    "country": "China",
+    "category": "article",
+    "contains_personal_info": false,
+    "queries": ["china", "public safety"],
+    "text_queries": ["literature review"]
+  }
+}
