@@ -469,8 +469,8 @@ def test_the_run_stops_after_repeated_rate_limits_and_keeps_what_it_has(workspac
 
     rows = run(workspace, tag, lambda _: None)
 
-    assert len(rows) == len(tag.calls) == run_eval.MAX_CONSECUTIVE_RATE_LIMITS
-    assert len(saved(workspace)["rows"]) == run_eval.MAX_CONSECUTIVE_RATE_LIMITS  # type: ignore[arg-type]
+    assert len(rows) == len(tag.calls) == run_eval.MAX_CONSECUTIVE_UNAVAILABLE
+    assert len(saved(workspace)["rows"]) == run_eval.MAX_CONSECUTIVE_UNAVAILABLE  # type: ignore[arg-type]
 
 
 def test_a_real_run_marks_labelled_rows_so_failures_make_its_gates_incomplete(workspace: Config) -> None:
@@ -492,6 +492,91 @@ def test_rate_limits_that_are_not_in_a_row_do_not_stop_the_run(workspace: Config
     rows = run(workspace, tag, lambda _: None)
 
     assert len(rows) == tag.calls == 8
+
+
+def busy(code: int = 503, status: str = "UNAVAILABLE") -> TaggingError:
+    error = TaggingError("rate_limit" if code == 429 else "other")
+    error.__cause__ = errors.ServerError(code, {"error": {"code": code, "message": SECRET, "status": status}})
+    return error
+
+
+@pytest.mark.parametrize(("code", "transient"), [(429, True), (500, True), (503, True), (400, False), (404, False)])
+def test_only_a_429_or_5xx_is_transient(code: int, transient: bool) -> None:
+    assert run_eval.is_transient(describe_error(busy(code))) is transient
+
+
+def test_other_failures_are_not_transient() -> None:
+    assert not run_eval.is_transient(describe_error(TaggingError("bad_response", "MAX_TOKENS")))
+    assert not run_eval.is_transient(describe_error(TaggingError("other")))
+    assert not run_eval.is_transient(None)
+
+
+def test_a_busy_service_is_retried_and_the_attempts_are_recorded(workspace: Config) -> None:
+    path = workspace.images / "a.png"
+    ok = (result(), Usage(1, 1, 1, "STOP"))
+    waits: list[float] = []
+    row = Row(image="a.png", size="original", model="m1", repeat=0)
+
+    got = run_eval.call_one(row, path, label(), Scripted(busy(), busy(429), ok), 2, 20.0, waits.append)
+
+    assert got is not None and row.result is not None and row.error is None
+    assert row.attempts == 3 and waits == [20.0, 20.0]
+    assert row.score is not None  # scored as normal once it got through
+
+
+def test_retries_run_out(workspace: Config) -> None:
+    row = Row(image="a.png", size="original", model="m1", repeat=0)
+    tag = Scripted(busy(), busy(), busy(), busy())
+
+    got = run_eval.call_one(row, workspace.images / "a.png", label(), tag, 2, 0.0, lambda _: None)
+
+    assert got is None and row.attempts == 3 and tag.calls == 3
+    assert run_eval.is_transient(row.error)
+
+
+def test_a_bad_reply_is_not_retried(workspace: Config) -> None:
+    row = Row(image="a.png", size="original", model="m1", repeat=0)
+    tag = Scripted(TaggingError("bad_response", "STOP"), (result(), Usage(1, 1, 1, "STOP")))
+
+    got = run_eval.call_one(row, workspace.images / "a.png", label(), tag, 2, 0.0, lambda _: None)
+
+    assert got is None and row.attempts == 1 and tag.calls == 1
+
+
+def test_by_default_nothing_is_retried(workspace: Config) -> None:
+    row = Row(image="a.png", size="original", model="m1", repeat=0)
+
+    run_eval.call_one(row, workspace.images / "a.png", label(), Scripted(busy()), 0, 0.0, lambda _: None)
+
+    assert row.attempts == 1
+
+
+def test_a_busy_service_is_not_a_loss_a_failure_or_instability() -> None:
+    ok = result()
+    rows = [
+        scored_row("a.png", label(), ok, size="original"),
+        scored_row("a.png", label(), ok, size="1600", repeat=0),
+    ]
+    unavailable = Row(image="a.png", size="1024", model="m", repeat=0, labelled=True,
+                      error=describe_error(busy()))
+    both = [scored_row("b.png", label(), ok, repeat=0), Row(image="b.png", size="1600", model="m", repeat=1,
+                                                         labelled=True, error=describe_error(busy()))]
+
+    assert "Lost vs original: nothing" in format_grid(rows + [unavailable])[-1]
+    assert cell_verdict([unavailable]) == "INCOMPLETE"
+    s = summarise_group("m", "1600", both)
+    assert (s["unavailable"], s["unstable_cells"], s["G5_valid_json"]) == (1, None, "PASS")
+
+
+def test_a_run_retries_with_the_configured_wait(workspace: Config) -> None:
+    ok = (result(), Usage(1, 1, 1, "STOP"))
+    cfg = Config(workspace.images, workspace.labels, ["original"], ["m1"], 1, 0.5, ["a.png"], workspace.out, False, 1, 7.0)
+    waits: list[float] = []
+
+    rows = run(cfg, Scripted(busy(), ok), waits.append)
+
+    assert rows[0].attempts == 2 and rows[0].result is not None
+    assert waits == [7.0]
 
 
 def test_a_configuration_error_stops_the_run(workspace: Config) -> None:
@@ -560,6 +645,7 @@ def test_defaults_and_model_from_the_environment() -> None:
     assert cfg.sizes == ["original", "1600", "1024"]
     assert cfg.models == ["env-model"]
     assert (cfg.repeats, cfg.delay, cfg.dry_run) == (1, 5.0, False)
+    assert (cfg.retries, cfg.retry_wait) == (2, 20.0)
 
 
 def test_models_can_be_repeated_and_override_the_environment() -> None:

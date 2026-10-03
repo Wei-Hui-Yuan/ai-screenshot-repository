@@ -47,7 +47,7 @@ from app.tagger import TaggingError, Usage, tag_image_with_usage
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 MIME_BY_FORMAT = {"PNG": "image/png", "JPEG": "image/jpeg", "WEBP": "image/webp"}
 ORIGINAL = "original"
-MAX_CONSECUTIVE_RATE_LIMITS = 3  # then stop and keep what we have
+MAX_CONSECUTIVE_UNAVAILABLE = 3  # then stop and keep what we have
 PLACE_QUERY_TARGET = 0.8  # G3
 VALID_JSON_TARGET = 0.9  # G5
 
@@ -83,6 +83,7 @@ class Row:
     model: str
     repeat: int
     labelled: bool = False
+    attempts: int = 1  # more than 1: the service was busy and we retried
     bytes_sent: int | None = None
     seconds: float | None = None
     usage: Usage | None = None
@@ -102,6 +103,8 @@ class Config:
     only: list[str]
     out: Path
     dry_run: bool
+    retries: int = 0  # extra attempts after a 429 or 5xx, each a real call
+    retry_wait: float = 0.0
 
 
 # --- scoring: pure functions ---------------------------------------------------
@@ -189,8 +192,13 @@ def judge(passed: bool | None, labelled: bool, complete: bool) -> str:
     return "INCOMPLETE" if not complete else gate(passed)
 
 
-def is_rate_limited(row: Row) -> bool:
-    return row.error is not None and row.error.get("kind") == "rate_limit"
+def is_transient(error: dict[str, object] | None) -> bool:
+    """A 429 or a 5xx (such as 503 UNAVAILABLE): the service said try later. It says
+    nothing about tagging quality, so it is never a loss, a failure or instability."""
+    if not error:
+        return False
+    code = error.get("api_code")
+    return error.get("kind") == "rate_limit" or (isinstance(code, int) and code >= 500)
 
 
 def signature(row: Row) -> object:
@@ -216,7 +224,7 @@ def summarise_group(model: str, size: str, rows: list[Row]) -> dict[str, object]
     scored = [r.score for r in rows if r.score is not None]
     complete = all(r.score is not None for r in labelled)
     valid = sum(r.result is not None for r in rows)
-    attempted = sum(not is_rate_limited(r) for r in rows)
+    attempted = sum(not is_transient(r.error) for r in rows)
     place = [s.place_ok for s in scored if s.place_ok is not None]
     false = [s.false_place for s in scored if s.false_place is not None]
     flags = [s.flag_ok for s in scored if s.flag_ok is not None]
@@ -225,7 +233,7 @@ def summarise_group(model: str, size: str, rows: list[Row]) -> dict[str, object]
     text_q = [v for s in scored for v in s.text_queries.values()]
     cells: dict[str, list[Row]] = {}
     for row in rows:
-        if not is_rate_limited(row):  # a 429 says nothing about stability
+        if not is_transient(row.error):  # a 429 or 503 says nothing about stability
             cells.setdefault(row.image, []).append(row)
     repeated = [group for group in cells.values() if len(group) > 1]
     usages = [r.usage for r in rows if r.usage]
@@ -234,7 +242,8 @@ def summarise_group(model: str, size: str, rows: list[Row]) -> dict[str, object]
         "size": size,
         "calls": len(rows),
         "valid": valid,
-        "rate_limited": len(rows) - attempted,
+        "unavailable": len(rows) - attempted,
+        "retries": sum(r.attempts - 1 for r in rows),
         "scored": ratio(len(scored), len(labelled)),
         "place_ok": ratio(sum(place), len(place)),
         "false_place": ratio(sum(false), len(false)),
@@ -280,7 +289,7 @@ def cell_verdict(group: list[Row]) -> str:
     """One image at one size: 'ok' if every check passed, else what failed."""
     if not group:
         return "-"
-    if any(is_rate_limited(r) for r in group):
+    if any(is_transient(r.error) for r in group):
         return "INCOMPLETE"
     if all(not r.labelled and not r.error for r in group):
         return "unscored"
@@ -360,32 +369,48 @@ def describe_error(exc: Exception) -> dict[str, object]:
     return info
 
 
-def call_one(row: Row, path: Path, label: LabelEntry | None, tag: TagFn) -> TagResult | None:
-    """Fill in `row`. Returns the result, or None if this call failed."""
+def call_one(
+    row: Row, path: Path, label: LabelEntry | None, tag: TagFn,
+    retries: int = 0, wait: float = 0.0, sleep: Callable[[float], None] = time.sleep,
+) -> TagResult | None:
+    """Fill in `row`. Returns the result, or None if this call failed. A 429 or
+    5xx is retried up to `retries` times. `row.attempts` records how many it took,
+    and `row.seconds` is the last attempt's."""
     row.labelled = label is not None
-    started = time.perf_counter()
     try:
         data, mime = prepare(path, row.size)
-        row.bytes_sent = len(data)
-        started = time.perf_counter()
-        result, row.usage = tag(data, mime, row.model)
-    except RuntimeError:
-        raise  # not configured: stop the whole run. The message has no secrets.
-    except Exception as exc:  # one bad image or call must not end the run
-        row.error = describe_error(exc)
-        if isinstance(exc, TaggingError):
-            row.usage = exc.usage  # token counts for a cut-off or unreadable reply
+    except Exception as exc:  # an unreadable image must not end the run
+        row.error, row.seconds = describe_error(exc), 0.0
         return None
-    finally:
+    row.bytes_sent = len(data)
+    for attempt in range(1, retries + 2):
+        row.attempts = attempt
+        started = time.perf_counter()
+        try:
+            result, row.usage = tag(data, mime, row.model)
+        except RuntimeError:
+            raise  # not configured: stop the whole run. The message has no secrets.
+        except Exception as exc:  # one bad call must not end the run
+            row.seconds = round(time.perf_counter() - started, 2)
+            row.error = describe_error(exc)
+            if isinstance(exc, TaggingError):
+                row.usage = exc.usage  # token counts for a cut-off or unreadable reply
+            if is_transient(row.error) and attempt <= retries:
+                sleep(wait)
+                continue
+            return None
         row.seconds = round(time.perf_counter() - started, 2)
-    row.result = result.model_dump()
-    if label is not None:
-        row.score = score(label, result)
-    return result
+        row.error = None  # an earlier attempt may have failed
+        row.result = result.model_dump()
+        if label is not None:
+            row.score = score(label, result)
+        return result
+    return None  # unreachable: the last attempt always returns
 
 
 def progress_line(n: int, total: int, row: Row, result: TagResult | None) -> str:
-    head = f"[{n:>2}/{total}] {row.image[:28]:<28} {row.size:>8} {row.seconds or 0:>6.1f}s  "
+    tries = f" (try {row.attempts})" if row.attempts > 1 else ""
+    head = f"[{n:>2}/{total}] {row.image[:28]:<28} {row.size:>8} {row.seconds or 0:>6.1f}s{tries}  "
     if result is None:
         error = row.error or {}
         keys = ("kind", "finish_reason", "api_code", "api_status")
@@ -424,12 +449,13 @@ def run(cfg: Config, tag: TagFn = tag_image_with_usage,
     try:
         for n, (model, path, size, repeat) in enumerate(plan, start=1):
             row = Row(image=path.name, size=size, model=model, repeat=repeat)
-            result = call_one(row, path, labels.get(path.name), tag)
+            result = call_one(row, path, labels.get(path.name), tag, cfg.retries, cfg.retry_wait, sleep)
             rows.append(row)
             print(progress_line(n, len(plan), row, result), flush=True)
-            streak = streak + 1 if is_rate_limited(row) else 0
-            if streak >= MAX_CONSECUTIVE_RATE_LIMITS:
-                print(f"Stopping: {streak} rate limits in a row. Re-run the rest later with --only.")
+            streak = streak + 1 if is_transient(row.error) else 0
+            if streak >= MAX_CONSECUTIVE_UNAVAILABLE:
+                print(f"Stopping: the service was unavailable {streak} times in a row. "
+                      "Re-run the rest later with --only.")
                 break
             if n < len(plan):
                 sleep(cfg.delay)
@@ -445,7 +471,7 @@ def print_summary(rows: list[Row]) -> None:
     print("G4 text-only queries found, G5 valid JSON >= 90%. INCOMPLETE: some labelled calls have no score.")
     for s in summarise(rows):
         print(f"  {s['model']} @ {s['size']}: calls={s['calls']} valid={s['valid']} "
-              f"rate_limited={s['rate_limited']} scored={s['scored']} | place={s['place_ok']} "
+              f"unavailable={s['unavailable']} retries={s['retries']} scored={s['scored']} | place={s['place_ok']} "
               f"false_place={s['false_place']} category={s['category_ok']} flag={s['flag_ok']}")
         unstable = "n/a (needs --repeats 2)" if s["unstable_cells"] is None else s["unstable_cells"]
         print(f"      place_q={s['place_queries']} other_q={s['other_queries']} text_q={s['text_queries']} | "
@@ -484,6 +510,9 @@ def parse_args(argv: list[str] | None, default_model: Callable[[], str] = tagger
     p.add_argument("--model", action="append", default=[], help="repeatable; default is GEMINI_MODEL")
     p.add_argument("--repeats", type=int, default=1, help="2 gives the noise floor")
     p.add_argument("--delay", type=float, default=5.0, help="seconds between calls")
+    p.add_argument("--retries", type=int, default=2,
+                   help="extra attempts after a 429 or 5xx (each is a real call)")
+    p.add_argument("--retry-wait", type=float, default=20.0, help="seconds before a retry")
     p.add_argument("--only", action="append", default=[], help="repeatable file name filter")
     p.add_argument("--out", type=Path, default=Path("eval/results"))
     p.add_argument("--dry-run", action="store_true", help="prepare images and count calls, no API calls")
@@ -491,16 +520,16 @@ def parse_args(argv: list[str] | None, default_model: Callable[[], str] = tagger
     sizes = [s.strip() for s in args.sizes.split(",") if s.strip()]
     if not sizes or any(s != ORIGINAL and not s.isdigit() for s in sizes):
         p.error("--sizes must be 'original' and/or pixel counts, e.g. original,1600,1024")
-    if args.repeats < 1:
-        p.error("--repeats must be at least 1")
+    if args.repeats < 1 or args.retries < 0:
+        p.error("--repeats must be at least 1 and --retries at least 0")
     try:
         models = args.model or [default_model()]
     except RuntimeError:
         if not args.dry_run:
             raise
         models = ["(unset)"]  # a dry run needs no configuration
-    return Config(args.images, args.labels, sizes, models, args.repeats,
-                  args.delay, args.only, args.out, args.dry_run)
+    return Config(args.images, args.labels, sizes, models, args.repeats, args.delay, args.only,
+                  args.out, args.dry_run, args.retries, args.retry_wait)
 
 
 def main(argv: list[str] | None = None) -> int:
