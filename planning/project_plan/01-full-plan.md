@@ -112,7 +112,7 @@ Evidence: [spike-results.md](../spike-results.md). How it was built: [02-mvp-out
 - **Reproducibility:** each record stores `model` and `prompt_version`.
 - **Search:** each term is quoted so special characters can't break the query, and matches by prefix ("tok" finds tokyo). Multiple terms are AND. Tags, city and country rank above summary and extracted text. Empty query returns newest first.
 - **Delete:** removes the file, the rows and the search entry.
-- **Retag:** overwrites AI fields. If S1 is built, manual edits must survive a retag. *(S1 was not built, so there are no manual edits to protect.)*
+- [CHANGED] **Retag:** overwrites AI fields. If S1 is built, manual edits must survive a retag. *(S1 was not built, so there are no manual edits to protect.)* *Built as: only a failed image can be retried (correction #40). Retrying a tagged image cleared its tags and search entry before the new call, so a failed retry left a good image failed and unsearchable. The API answers 409 for a tagged image.*
 - **Delete during tagging:** if an image is deleted while it's being tagged, the result is discarded. No tags or search entry are written.
 - [DEFERRED] **Facets:** `GET /api/facets` counts only tagged, unflagged images.
 - **Messages:** upload rejections and tagging failures use the fixed messages in `planning/design/design.md` §6. Raw exception details go to the server console only.
@@ -203,3 +203,4 @@ Phases 2 to 5 were combined into one pass. See [02-mvp-outcome.md](02-mvp-outcom
 | A place is filled only when the text states it | AC-5. A landmark photo with no caption gets no city, though the name can appear in the title and tags. Tuned over three prompt drafts |
 | Retry only when Google suggests a short wait | A daily quota says hours, so retrying only holds a tagging slot |
 | Refuse changing requests that come from other sites | A page on another site could otherwise spend the Gemini quota through the browser |
+| Retry only on failed images | A failed retry of a tagged image wiped its tags and search entry (correction #40). The plan's retag overwrote the AI fields on any image |

@@ -133,7 +133,7 @@ Built as a `<dialog>` opened from a card. Native `<dialog>` behaviour (Esc to cl
 - **Fields:** title (the dialog's heading), place and category on one line, summary, tags, then extracted text in a collapsed `<details>` ("Text in image"). Empty fields are left out, not shown blank.
 - **Tags** are buttons. Clicking one closes the dialog and runs that search.
 - **Metadata line:** date added, model and prompt version, in `--muted`, shown once tagged. There for the eval.
-- **Actions:** "Retry tagging" (outlined secondary button), "Delete" (text button in `--danger`) and "Close". Retry is disabled while pending. Delete asks "Delete this screenshot? This can't be undone." with the browser's `confirm()`, then closes the dialog and refreshes the grid.
+- **Actions:** "Retry tagging" (outlined secondary button), "Delete" (text button in `--danger`) and "Close". Retry is disabled while pending. Delete asks "Delete this screenshot? This can't be undone." with the browser's `confirm()`, then closes the dialog and refreshes the grid. *As built: "Retry tagging" is shown only on failed images, not on tagged or pending ones (correction #40). Retrying a tagged image cleared its tags first, so a failed retry left it unsearchable. The mockup above shows the original design.*
 - **Pending:** the title reads "Tagging..." and the dialog refreshes itself with the library's 2 s polling until tagging settles. Retry puts it back into this state.
 - **Failed:** an error box above the fields (`--bg`, 1px `--danger` border, `--text`) shows the reason (section 6) and "Use Retry tagging to try again." There's only one retry control: the button in the actions row.
 - **Flagged:** a note above the fields with a 1px `--warning` border: "Flagged: may contain personal info."
