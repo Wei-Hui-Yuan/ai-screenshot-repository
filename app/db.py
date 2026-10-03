@@ -160,21 +160,16 @@ def set_failed(image_id: int, message: str) -> bool:
 
 
 def reset_pending(image_id: int) -> bool:
-    """Retag: back to pending with the AI fields cleared, so a pending image has no
-    tags and no search entry. False if it is missing or already pending."""
+    """Retry: a failed image goes back to pending. Only failed images, because a
+    tagged one would lose its tags and search entry if the new call failed too.
+    A failed image has no AI fields, tags or search entry to clear. False if the
+    image is missing or not failed."""
     with connect() as conn:
         cursor = conn.execute(
-            "UPDATE images SET status = 'pending', error = NULL, title = NULL, summary = NULL, "
-            "category = NULL, city = NULL, country = NULL, extracted_text = NULL, "
-            "contains_personal_info = 0, model = NULL, prompt_version = NULL "
-            "WHERE id = ? AND status IN ('tagged', 'failed')",
+            "UPDATE images SET status = 'pending', error = NULL WHERE id = ? AND status = 'failed'",
             (image_id,),
         )
-        if cursor.rowcount == 0:
-            return False
-        conn.execute("DELETE FROM tags WHERE image_id = ?", (image_id,))
-        conn.execute("DELETE FROM image_fts WHERE rowid = ?", (image_id,))
-    return True
+    return cursor.rowcount == 1
 
 
 def mark_interrupted() -> int:

@@ -290,14 +290,18 @@ async function showDetail(id) {
     const added = new Date(row.created_at).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
     side.push(el("p", { className: "muted", textContent: `Added ${added} · ${row.model} · prompt ${row.prompt_version}` }));
   }
-  const retry = el("button", { className: "secondary", type: "button", textContent: "Retry tagging", disabled: row.status === "pending" });
-  retry.addEventListener("click", () => act(() => api(`/api/images/${encodeURIComponent(id)}/retag`, { method: "POST" })));
+  const buttons = [];
+  if (row.status === "failed") { // a tagged image is never retried: a failed retry would wipe its tags
+    const retry = el("button", { className: "secondary", type: "button", textContent: "Retry tagging" });
+    retry.addEventListener("click", () => act(() => api(`/api/images/${encodeURIComponent(id)}/retag`, { method: "POST" })));
+    buttons.push(retry);
+  }
   const remove = el("button", { className: "danger", type: "button", textContent: "Delete" });
   remove.addEventListener("click", async () => {
     if (!confirm("Delete this screenshot? This can't be undone.")) return;
     await act(() => api(`/api/images/${encodeURIComponent(id)}`, { method: "DELETE" }), true);
   });
-  side.push(el("div", { className: "actions" }, retry, remove, Object.assign(closeButton(), { className: "secondary spacer" })));
+  side.push(el("div", { className: "actions" }, ...buttons, remove, Object.assign(closeButton(), { className: "secondary spacer" })));
   const picture = el("img", { src: fileUrl(id), alt: row.status === "tagged" ? (row.title || "Screenshot") : "Screenshot, " + (row.status === "pending" ? "tagging in progress" : "tagging failed") });
   detail.replaceChildren(el("div", { className: "detail" }, picture, el("div", {}, ...side)));
 }

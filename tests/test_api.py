@@ -235,6 +235,21 @@ def test_a_missing_key_fails_the_image_without_leaking_anything(
     assert (one(client, 1)["status"], one(client, 1)["error"]) == ("failed", "Tagging error")
 
 
+def test_retrying_a_tagged_image_is_refused_and_keeps_its_tags(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    tagger = use(monkeypatch, good_result(title="Keep me", tags=["keepme"]), TaggingError("rate_limit"))
+    post(client, png_bytes())
+
+    refused = client.post("/api/images/1/retag")
+
+    assert refused.status_code == 409
+    assert tagger.calls == 1  # Gemini was not asked again
+    row = one(client, 1)
+    assert (row["status"], row["title"], row["tags"]) == ("tagged", "Keep me", ["keepme"])
+    assert titles(client, q="keepme") == ["Keep me"]
+
+
 def test_retagging_an_image_that_is_already_pending_is_refused(client: TestClient) -> None:
     image_id, _ = db.add_pending("a" * 64, "x.webp")
 

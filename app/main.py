@@ -199,8 +199,11 @@ def get_image_file(image_id: ImageId) -> FileResponse:
 
 @app.post("/api/images/{image_id}/retag")
 def retag(image_id: ImageId) -> dict[str, object]:
-    if db.get_image(image_id) is None:
+    row = db.get_image(image_id)
+    if row is None:
         raise HTTPException(404, "Not found")
+    if row["status"] == "tagged":
+        raise HTTPException(409, "Only failed screenshots can be retried")
     if not db.reset_pending(image_id):
         raise HTTPException(409, "Already being tagged")
     queue_tagging(image_id)

@@ -79,27 +79,26 @@ def test_set_failed_records_the_message_once() -> None:
     assert row is not None and (row["status"], row["error"]) == ("failed", "Rate limit reached")
 
 
-def test_retag_clears_the_ai_fields_tags_and_search_entry() -> None:
-    image_id = tagged(1, title="Old title", tags=["old"])
+def test_a_failed_image_goes_back_to_pending_for_a_retry() -> None:
+    image_id = add()
+    db.set_failed(image_id, "Rate limit reached")
 
     assert db.reset_pending(image_id) is True
 
     row = db.get_image(image_id)
-    assert row is not None
-    assert (row["status"], row["title"], row["tags"], row["model"]) == ("pending", None, [], None)
-    assert titles("old") == []
-    assert db.reset_pending(image_id) is False  # already pending
+    assert row is not None and (row["status"], row["error"]) == ("pending", None)
+    assert db.reset_pending(image_id) is False  # now pending, not failed
     assert db.reset_pending(999) is False
 
 
-def test_retagging_replaces_old_tags_instead_of_adding_to_them() -> None:
-    image_id = tagged(1, tags=["old"])
-    db.reset_pending(image_id)
-    db.set_tagged(image_id, good_result(tags=["new"]), "m", "v1")
+def test_a_tagged_image_cannot_be_reset_so_a_failed_retry_cannot_wipe_its_tags() -> None:
+    image_id = tagged(1, title="Keep me", tags=["keepme"])
+
+    assert db.reset_pending(image_id) is False
 
     row = db.get_image(image_id)
-    assert row is not None and row["tags"] == ["new"]
-    assert titles("old") == [] and len(titles("new")) == 1
+    assert row is not None and (row["status"], row["title"], row["tags"]) == ("tagged", "Keep me", ["keepme"])
+    assert titles("keepme") == ["Keep me"]
 
 
 def test_startup_marks_leftover_pending_images_as_interrupted() -> None:
