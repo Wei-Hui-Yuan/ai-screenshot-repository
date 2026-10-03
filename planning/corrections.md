@@ -244,10 +244,10 @@ Every time the AI gets something wrong, whoever catches it, it goes here. Rules 
 - **What the AI got wrong:** Retry tagging is offered on healthy cards and clears the tags and search entry before calling Gemini, so a failed retry leaves a good image failed and unsearchable. The same image also gets different tags on a retry (temperature left at the default, and the spike never repeated a run), which nobody measured or flagged.
 - **Caught by:** Human, who clicked Retry tagging on a Mount Fuji post and saw the title, summary and two tags change. The AI then confirmed the lost tags with a scratch script and no Gemini call.
 - **Fix / lesson:** Retry now exists only for failed images: the button is hidden otherwise, the API refuses a tagged image with 409, and the database reset works only from failed. Two new tests fail under the old behaviour. The run-to-run variation is still unmeasured. Don't clear good data before the replacement exists.
-- **Human verdict:** Pending
+- **Human verdict:** Confirmed
 
 ### #41 · Post-build · 2026-10-04
 - **What the AI got wrong:** Told the human that offering Retry only on failed cards "is what the original plan describes". Only F6 says that. Plan §7 ("Retag: overwrites AI fields") and `design.md` (Retry among the detail actions) describe retry on any card, so the human approved a departure from the plan on a wrong description.
 - **Caught by:** AI, when reading the plan and design again before editing the code.
 - **Fix / lesson:** Told the human before building. The code follows the human's approval; the plan and design notes are proposed, not edited. Check the plan text before saying what it says.
-- **Human verdict:** Pending
+- **Human verdict:** Confirmed
