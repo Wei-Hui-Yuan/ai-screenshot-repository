@@ -2,7 +2,7 @@
 
 I screenshot things to remember them (places, food, recipes, articles, receipts) and then can't find them again. This is a small local web app for that: drop screenshots in, Gemini reads and tags each one, and typing a word like "kyoto" finds every screenshot about it, even a word that appears only in a screenshot's text.
 
-The planning notes, handoffs, a log of the agent's mistakes and the Gemini evaluation are in [`planning/`](planning/).
+The planning notes, the features deferred to a later version, handoffs, a log of the agent's mistakes and the Gemini evaluation are in [`planning/`](planning/).
 
 ## Run it
 
@@ -47,13 +47,12 @@ Tests need no key and never call Gemini: `pytest`. The Gemini evaluation does: `
 - **The personal-info flag is a second line of defence.** Gemini sets it after the image has already been sent to Google, so it only hides cards in your own library.
 - **English only**, and Gemini's `generate_content` call is marked "legacy but fully supported" by Google; it is isolated in `app/tagger.py`, so changing it later is a one-function job.
 
-
 ## Layout
 
 ```
 app/        main.py (routes), db.py (all SQL), images.py, tagger.py (the only Gemini code),
             search.py, schemas.py, static/index.html (one page, vanilla JS)
-eval/       run_eval.py (the Gemini evaluation), make_synthetic.py (fake screenshots)
+eval/       run_eval.py (the Gemini evaluation), make_synthetic.py and make_demo_images.py (fake screenshots)
 tests/      pytest, Gemini always mocked
 planning/   plans, design, handoffs, corrections log, spike results
 data/       git-ignored: the SQLite database and stored images
