@@ -41,10 +41,12 @@ USER_PROMPT = "Index this screenshot."
 PROMPT_HASH = hashlib.sha256((SYSTEM_PROMPT + USER_PROMPT).encode()).hexdigest()[:8]
 
 # Starting values, tuned in the phase 1 spike. Thinking tokens count towards the
-# output limit, so it can't be too small. AC-1 wants each image tagged or failed
-# within 60 s, hence the timeout.
+# output limit, so it can't be too small. The first real call took 29.9 s with the
+# default thinking level, so the original 30 s timeout was too tight. The spike uses
+# a generous one to record true latencies, and locks the final value from them
+# (AC-1 wants each image tagged or failed within 60 s).
 MAX_OUTPUT_TOKENS = 8192
-REQUEST_TIMEOUT_MS = 30_000
+REQUEST_TIMEOUT_MS = 120_000
 
 RESPONSE_SCHEMA = TagResult.model_json_schema()
 # Ask for the fields in declaration order, so a cut-off reply loses extracted_text
@@ -126,7 +128,9 @@ def tag_image_with_usage(
         response_mime_type="application/json",
         response_json_schema=RESPONSE_SCHEMA,
         max_output_tokens=MAX_OUTPUT_TOKENS,
-        # No tools: the model only reads the image (hard rule 5).
+        # No tools: the model only reads the image (hard rule 5). The SDK turns
+        # automatic function calling on by default, so switch it off explicitly.
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
     )
     contents = [types.Part.from_bytes(data=image, mime_type=mime_type), USER_PROMPT]
     try:

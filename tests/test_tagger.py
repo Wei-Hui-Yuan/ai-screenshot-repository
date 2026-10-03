@@ -103,7 +103,7 @@ def test_request_is_built_as_planned(use_fake: Callable[[object], FakeModels]) -
     assert isinstance(config, types.GenerateContentConfig)
     assert call["model"] == "test-model"
     assert config.tools is None  # the model gets no tools (rule 5)
-    assert config.automatic_function_calling is None
+    assert config.automatic_function_calling.disable is True  # type: ignore[union-attr]
     assert config.response_mime_type == "application/json"
     assert config.response_json_schema == tagger.RESPONSE_SCHEMA
     sent = dict(tagger.RESPONSE_SCHEMA)
