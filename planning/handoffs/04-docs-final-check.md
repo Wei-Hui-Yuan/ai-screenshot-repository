@@ -6,18 +6,21 @@ Done:
 - Tidied every planning doc in 6 commits (`2354d6a` to `d309776`) and pushed. Wording is plainer and first-person AI voice is gone. Plans, decisions, amendments and all 33 verdicts are unchanged.
 - Condensed `corrections.md` into short entries, with the long original linked. Added #34 to #38, confirmed by the owner.
 - Added a one-page summary to `planning/README.md`: AI tools, where the AI helped and failed, what was deferred, the weakest part, next steps.
+- Exported the four Claude Code sessions for this project, to be sent with the submission. No API key or token appears in any of them.
 - Checked: 291 tests pass with no key, all 44 relative links resolve, the API key is in no commit, and no image or `data/` files are tracked.
 
 Decisions (and why):
 - "human" in the rule and log docs, "owner" in the narrative docs. Kept as is.
 - Deferred UI features are described as future work, not cuts. v1 is a proof of concept and time ran short.
 - Handoffs and `corrections.md` keep their original text. They got notes and condensing, not rewrites.
+- The session logs are sent privately, not committed. The brief lists them as a submission item, and this keeps transcripts out of a public repo and out of git history.
 
 Not done / blockers:
-- Session log export, and the demo recording. Both are in the brief.
+- The demo recording, which the brief asks for.
+- The export of this session was taken before it ended, so it stops at that point. Re-export it just before sending.
 - `eval/labels.json` names real photo files and one place. The photos are not committed. The owner decides whether that is acceptable.
 
-Next step: export the session logs, record the demo, then submit the repo link.
+Next step: record the demo, then submit the repo link and send the session logs.
 
 Files touched: `README.md`, `planning/README.md`, `planning/corrections.md`, this file.
 

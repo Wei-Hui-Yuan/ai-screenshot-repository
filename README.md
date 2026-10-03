@@ -2,7 +2,7 @@
 
 I screenshot things to remember them (places, food, recipes, articles, receipts) and then can't find them again. This is a small local web app for that: drop screenshots in, Gemini reads and tags each one, and typing a word like "kyoto" finds every screenshot about it, even a word that appears only in a screenshot's text.
 
-It was built with Claude Code. [`planning/`](planning/) has the plans, the features deferred to a later version, handoffs, a log of the agent's mistakes and the Gemini evaluation, and starts with a one-page summary of how it was built.
+It was built with Claude Code. [`planning/`](planning/) has the plans, the features deferred to a later version, handoffs, a log of the agent's mistakes and the Gemini evaluation, and starts with a one-page summary of how it was built. The exported agent session logs were submitted separately and are not in the repo.
 
 ## Run it
 
