@@ -1,12 +1,12 @@
 # Full Plan: AI Screenshot Repository
 
-> **Status: frozen baseline.** This is the original plan, written on 2026-10-03 before any code, and its wording is left as written. It says what we set out to build. What was actually built, with the evidence, is in [02-mvp-outcome.md](02-mvp-outcome.md). This file was renamed from `projectplan.md`; section numbers are unchanged, so older references to `projectplan.md` section N point here.
+> **Status: baseline plan, annotated with the outcome.** Written on 2026-10-03 before any code. The plan text is left as written; the status tags and the *Built as:* notes were added after the build. What was actually built, with the evidence, is in [02-mvp-outcome.md](02-mvp-outcome.md). This file was renamed from `projectplan.md`; section numbers are unchanged, so older references to `projectplan.md` section N point here. The text before any annotation is in Git: [projectplan.md as first committed](https://github.com/Wei-Hui-Yuan/ai-screenshot-repository/blob/a02c83dbde4c44d1b0787cc82a7af9968fc39d87/planning/project_plan/projectplan.md).
 >
-> Each item below carries a status tag: **[BUILT]** as planned, **[CHANGED]** built differently (see the note), **[CUT]** dropped for time, **[LATER]** not started.
+> **Status tags.** **[BUILT]** as planned. **[CHANGED]** built differently (see the note). **[DEFERRED]** planned for v1 but postponed to a later version, for time and to keep v1 a proof of concept. **[LATER]** future work that was never in v1 scope. Tables have a Status column. In lists, an item with no tag was built as planned.
 
 ## What changed since this plan was written
-The project ran long, so phases 2 to 5 were combined into one pass and some features were cut. The changes that matter:
-- **Cut for time:** category and place chips with `GET /api/facets` (F4, journey J3), the separate `/image/{id}` page, "Load more", toasts, per-card polling and the hold-out evaluation. Search plus clickable tags, in a detail dialog on the one page, cover the main journey.
+The project ran long, so phases 2 to 5 were combined into one pass and some features were deferred. The changes that matter:
+- **Deferred for time:** category and place chips with `GET /api/facets` (F4, journey J3), the separate `/image/{id}` page, "Load more", toasts, per-card polling and the hold-out evaluation. Search plus clickable tags, in a detail dialog on the one page, cover the main journey. The deferred features are planned for a later version.
 - **The model is `gemini-3.1-flash-lite`,** chosen in the spike. `gemini-3.5-flash` allows only 20 requests per day on the free tier and returned 503 on about half of its early calls.
 - **Demo and eval data is a synthetic set** (`eval/make_synthetic.py`), because it is public-safe and its labels are exact. The real photos stay local.
 - **Tagging had to learn about quotas:** it retries only when Google suggests a short wait, and gives up on an image after a deadline, because the free tier's daily limits are small and per model.
@@ -36,7 +36,7 @@ Evidence: [spike-results.md](../spike-results.md). How it was built: [02-mvp-out
 | F1 | Upload and compress | Drag and drop one or many images. Each is validated, re-encoded smaller, and deduplicated by hash. | **[BUILT]** Up to 20 files of 10 MB, validated by decoding, 1600 px WebP, SHA-256 dedupe |
 | F2 | AI tagging | Gemini returns structured JSON: title, summary, category, city, country, up to 8 tags, extracted text, personal-info flag. | **[BUILT]** `gemini-3.1-flash-lite`, prompt `v1` |
 | F3 | Search | One box over title, summary, tags, place and extracted text. | **[BUILT]** FTS5 prefix search, with tags and places ranked first |
-| F4 | Groups | Category and place chips with counts. No manual folders. | **[CUT]** Search plus clickable tags replace it |
+| F4 | Groups | Category and place chips with counts. No manual folders. | **[DEFERRED]** Search plus clickable tags stand in for it |
 | F5 | Library and detail | Thumbnail grid and a detail view with all fields. | **[CHANGED]** A grid, with the detail in a dialog on the same page |
 | F6 | Failure handling | Failed images show their error and can be retried or deleted. Upload failures notify immediately. | **[CHANGED]** Failed cards show the error with retry and delete. A status line replaces toasts |
 | F7 | Personal-info flag | Flagged images are hidden by default, with a "show flagged" toggle. A second line of defence only: the flag is set after the image has been sent. | **[BUILT]** Hidden by default, with a Show flagged checkbox |
@@ -44,7 +44,7 @@ Evidence: [spike-results.md](../spike-results.md). How it was built: [02-mvp-out
 
 [LATER] **Stretch:** S1 manual tag edit/remove. *Not started.*
 
-[BUILT] **Out of scope for v1:** accounts, hosting, Telegram, semantic search, phone sync, video, mobile app, non-English screenshots. *Unchanged: all of these are still out of scope.*
+**Out of scope for v1:** accounts, hosting, Telegram, semantic search, phone sync, video, mobile app, non-English screenshots. *Unchanged: all of these are still out of scope.*
 
 ## 4. Tech stack and architecture
 | Piece | Choice | Why | Status |
@@ -59,27 +59,27 @@ Evidence: [spike-results.md](../spike-results.md). How it was built: [02-mvp-out
 | Config | `.env` (`GEMINI_API_KEY`, `GEMINI_MODEL`) plus `.env.example`; `.env` and `data/` git-ignored | No secrets in the repo | **[BUILT]** Plus an optional `DATA_DIR` |
 
 **Request flow**
-1. [BUILT] Browser sends a file to `POST /api/images`.
-2. [BUILT] Server checks type by content, hashes the original bytes, and returns early if a duplicate.
-3. [BUILT] Server compresses and saves the file, inserts a row as `pending`, and responds immediately.
-4. [BUILT] A background task sends the stored image to Gemini and validates the JSON.
-5. [BUILT] On success it writes fields, tags and the search entry (`tagged`). On failure it records the error (`failed`).
+1. Browser sends a file to `POST /api/images`.
+2. Server checks type by content, hashes the original bytes, and returns early if a duplicate.
+3. Server compresses and saves the file, inserts a row as `pending`, and responds immediately.
+4. A background task sends the stored image to Gemini and validates the JSON.
+5. On success it writes fields, tags and the search entry (`tagged`). On failure it records the error (`failed`).
 6. [CHANGED] The browser polls `GET /api/images` every 2 s and updates cards. *Built as: the page re-fetches the whole grid every 2 s while any card is pending, and only redraws it when something changed.*
 
-[BUILT] **Compression.** Convert to RGB, scale so the longest edge is at most 1600 px (never upscale), save as WebP at quality about 80. These numbers are a starting point, tuned in the phase 1 spike. Re-encoding also strips EXIF metadata and rejects malformed images. The original is not kept, and that is a deliberate trade-off. *The spike locked these numbers: 1600 px, quality 80.*
+**Compression.** Convert to RGB, scale so the longest edge is at most 1600 px (never upscale), save as WebP at quality about 80. These numbers are a starting point, tuned in the phase 1 spike. Re-encoding also strips EXIF metadata and rejects malformed images. The original is not kept, and that is a deliberate trade-off. *The spike locked these numbers: 1600 px, quality 80.*
 
-[BUILT] **Tagger seam.** Tagging lives in one module with a single function: image in, validated tags out. Tests mock it, and a different provider can replace it later.
+**Tagger seam.** Tagging lives in one module with a single function: image in, validated tags out. Tests mock it, and a different provider can replace it later.
 
 **Why not:** embeddings or a vector DB (extra moving parts, keyword search is enough for the main query), a JS framework (no build step needed), cloud storage or hosting (see Future work).
 
-[BUILT] **Bind address:** `127.0.0.1` only.
+**Bind address:** `127.0.0.1` only.
 
 ## 5. Navigation and routes
 **Pages**
 | Route | Purpose | Status |
 |---|---|---|
-| `/` | Library: dropzone with privacy warning, search box, category/place chips, grid | **[CHANGED]** Dropzone, privacy note, search and grid built. Chips cut |
-| `/image/{id}` | Detail: full image, all fields, retry and delete | **[CUT]** The detail is a dialog on `/` |
+| `/` | Library: dropzone with privacy warning, search box, category/place chips, grid | **[CHANGED]** Dropzone, privacy note, search and grid built. Chips deferred |
+| `/image/{id}` | Detail: full image, all fields, retry and delete | **[DEFERRED]** The detail is a dialog on `/` |
 
 **API**
 | Method and path | Purpose | Status |
@@ -90,33 +90,33 @@ Evidence: [spike-results.md](../spike-results.md). How it was built: [02-mvp-out
 | `GET /api/images/{id}/file` | Serve the stored image | **[BUILT]** |
 | `POST /api/images/{id}/retag` | Run tagging again | **[BUILT]** |
 | `DELETE /api/images/{id}` | Remove file, rows and search entry | **[BUILT]** |
-| `GET /api/facets` | Category and place counts for the chips | **[CUT]** Chips were cut |
+| `GET /api/facets` | Category and place counts for the chips | **[DEFERRED]** Chips were deferred |
 
 ## 6. User journeys
-- [BUILT] **J1: Add a batch.** Drag 10 screenshots in. Cards appear as pending and fill in as tagging finishes.
-- [BUILT] **J2: Find one.** Type "tokyo". Results show. Open one to see the full record. *(The record opens in a dialog on the same page.)*
-- [CUT] **J3: Browse by group.** Click Travel, then Kyoto. *(Search and clickable tags replace it.)*
+- **J1: Add a batch.** Drag 10 screenshots in. Cards appear as pending and fill in as tagging finishes.
+- **J2: Find one.** Type "tokyo". Results show. Open one to see the full record. *(The record opens in a dialog on the same page.)*
+- [DEFERRED] **J3: Browse by group.** Click Travel, then Kyoto. *(Search and clickable tags stand in for it.)*
 - [CHANGED] **J4: Upload fails.** A wrong file type, an oversized file, or a network error shows an error toast immediately. Other files in the batch still upload. *(Built as a status line, not a toast.)*
 - [CHANGED] **J5: Tagging fails.** A Gemini rate limit or bad response. The card shows failed with the error and a toast on the next poll. Retry works and other images are unaffected. *(Built as a status line on the next poll, not a toast.)*
-- [BUILT] **J6: Flagged.** A screenshot containing personal info is flagged and hidden from the default view. The toggle reveals it.
-- [BUILT] **J7: Duplicate.** The same file again shows "already in library". There is no second Gemini call.
+- **J6: Flagged.** A screenshot containing personal info is flagged and hidden from the default view. The toggle reveals it.
+- **J7: Duplicate.** The same file again shows "already in library". There is no second Gemini call.
 
 ## 7. Data behaviour
-- [BUILT] **Status flow:** `pending` → `tagged` or `failed`. Retag moves it back to `pending`. On server start, rows left `pending` by an interrupted run are marked `failed` ("interrupted").
-- [BUILT] **Dedupe:** SHA-256 of the original upload bytes, checked before compressing, saving, or calling Gemini.
-- [BUILT] **Validation:** PNG, JPEG or WebP, verified by decoding with Pillow. Max 10 MB per file, 20 files per upload. Pillow's decompression-bomb guard stays on.
-- [BUILT] **Storage:** `data/images/<sha256>.webp`. The uploaded filename is never used.
+- **Status flow:** `pending` → `tagged` or `failed`. Retag moves it back to `pending`. On server start, rows left `pending` by an interrupted run are marked `failed` ("interrupted").
+- **Dedupe:** SHA-256 of the original upload bytes, checked before compressing, saving, or calling Gemini.
+- **Validation:** PNG, JPEG or WebP, verified by decoding with Pillow. Max 10 MB per file, 20 files per upload. Pillow's decompression-bomb guard stays on.
+- **Storage:** `data/images/<sha256>.webp`. The uploaded filename is never used.
 - [CHANGED] **Tagging:** background task, at most 3 concurrent Gemini calls, one retry with backoff on rate limits. Prompt rule: tag only what the image states or clearly shows. Place stays null if not stated. Output goes through a Pydantic model, and an out-of-list category falls back to `other`. *Built as: a dedicated 3-thread pool, up to two retries (after 5 s and 15 s) when Google suggests a wait of 30 s or less, and no retry once 50 s have passed for that image.*
-- [BUILT] **Normalisation:** tags are lowercase, trimmed and de-duplicated. City and country are separate fields.
-- [BUILT] **Language:** English only for v1. Screenshots in other languages are not evaluated, and results for them are undefined.
-- [BUILT] **Reproducibility:** each record stores `model` and `prompt_version`.
-- [BUILT] **Search:** each term is quoted so special characters can't break the query, and matches by prefix ("tok" finds tokyo). Multiple terms are AND. Tags, city and country rank above summary and extracted text. Empty query returns newest first.
-- [BUILT] **Delete:** removes the file, the rows and the search entry.
-- [BUILT] **Retag:** overwrites AI fields. If S1 is built, manual edits must survive a retag. *(S1 was not built, so there are no manual edits to protect.)*
-- [BUILT] **Delete during tagging:** if an image is deleted while it's being tagged, the result is discarded. No tags or search entry are written.
-- [CUT] **Facets:** `GET /api/facets` counts only tagged, unflagged images.
-- [BUILT] **Messages:** upload rejections and tagging failures use the fixed messages in `planning/design/design.md` §6. Raw exception details go to the server console only.
-- [BUILT] **Upload results** come back in the order the files were sent.
+- **Normalisation:** tags are lowercase, trimmed and de-duplicated. City and country are separate fields.
+- **Language:** English only for v1. Screenshots in other languages are not evaluated, and results for them are undefined.
+- **Reproducibility:** each record stores `model` and `prompt_version`.
+- **Search:** each term is quoted so special characters can't break the query, and matches by prefix ("tok" finds tokyo). Multiple terms are AND. Tags, city and country rank above summary and extracted text. Empty query returns newest first.
+- **Delete:** removes the file, the rows and the search entry.
+- **Retag:** overwrites AI fields. If S1 is built, manual edits must survive a retag. *(S1 was not built, so there are no manual edits to protect.)*
+- **Delete during tagging:** if an image is deleted while it's being tagged, the result is discarded. No tags or search entry are written.
+- [DEFERRED] **Facets:** `GET /api/facets` counts only tagged, unflagged images.
+- **Messages:** upload rejections and tagging failures use the fixed messages in `planning/design/design.md` §6. Raw exception details go to the server console only.
+- **Upload results** come back in the order the files were sent.
 - [CHANGED] **Pages:** the server returns `index.html` for both `/` and `/image/{id}`. *Only `/` exists now.*
 
 ```sql
@@ -127,7 +127,7 @@ tags(image_id, tag, PRIMARY KEY(image_id, tag))
 image_fts(title, summary, tags, city, country, extracted_text)  -- FTS5
 ```
 
-[BUILT] *Built as written, except that `images.id` is `AUTOINCREMENT`, so an id is never reused after a delete.*
+*Built as written, except that `images.id` is `AUTOINCREMENT`, so an id is never reused after a delete.*
 
 ## 8. Acceptance criteria
 | ID | Criterion | Status |
@@ -151,9 +151,9 @@ Evidence for each criterion is in [02-mvp-outcome.md](02-mvp-outcome.md#acceptan
 
 **Eval: how we judge Gemini's tagging**
 - [CHANGED] Test set: 15–20 English-language screenshots I collect, with hand-written expected city/country/category and a few search queries each. Only public-safe images are committed. *Built as: 7 synthetic phone screenshots with exact labels, plus 5 real photos with hand-written labels. The 15 to 20 set was not collected.*
-- [BUILT] Measures: query recall (AC-3), false-place rate (images with no place that got one), category accuracy, personal-info flag hits.
+- Measures: query recall (AC-3), false-place rate (images with no place that got one), category accuracy, personal-info flag hits.
 - [CHANGED] Comparisons in the spike: original vs 1600 px vs 1024 px images, to check compression doesn't hurt tagging. Optionally two Gemini models, if time allows. *Built as: original vs 1600 px only, since 1024 px was dropped. Two other models were probed, not compared.*
-- [BUILT] Real failures found are logged as they happen for the demo. *They are in [corrections.md](../corrections.md) and [spike-results.md](../spike-results.md).*
+- Real failures found are logged as they happen for the demo. *They are in [corrections.md](../corrections.md) and [spike-results.md](../spike-results.md).*
 
 ## 9. Implementation phases
 | Phase | Work | Est. | Outcome |
@@ -190,14 +190,14 @@ Phases 2 to 5 were combined into one pass. See [02-mvp-outcome.md](02-mvp-outcom
 | Name: AI Screenshot Repository | |
 
 **Resolved** (these were open when the plan was written)
-1. Flagged images: **stored but hidden** by default, with a Show flagged checkbox. [BUILT]
+1. Flagged images: **stored but hidden** by default, with a Show flagged checkbox.
 2. A stage-and-confirm step before sending to Gemini: **not built**, as recommended. The dropzone warning is used instead. [LATER]
-3. Which Gemini model to start with: **`gemini-3.1-flash-lite`**, decided in the spike. [BUILT]
+3. Which Gemini model to start with: **`gemini-3.1-flash-lite`**, decided in the spike.
 
 **Made after this plan was written**
 | Decision | Why |
 |---|---|
-| Cut for time: chips and facets, the detail page, "Load more", toasts, per-card polling, the hold-out evaluation | The project ran long. Search plus clickable tags cover the main journey, and all 14 acceptance criteria still hold |
+| Deferred for time: chips and facets, the detail page, "Load more", toasts, per-card polling, the hold-out evaluation | The project ran long. Search plus clickable tags cover the main journey, and all 14 acceptance criteria still hold |
 | Demo and eval data is a synthetic set. Real photos stay local | Public-safe by construction, and the labels are exact |
 | The model is `gemini-3.1-flash-lite` | 3 to 12 s per call and reliable. `gemini-3.5-flash` allows 20 requests per day on the free tier and returned 503 on about half of its early calls |
 | A place is filled only when the text states it | AC-5. A landmark photo with no caption gets no city, though the name can appear in the title and tags. Tuned over three prompt drafts |

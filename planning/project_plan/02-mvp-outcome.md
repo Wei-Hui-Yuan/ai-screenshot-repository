@@ -5,10 +5,12 @@
 > - The original vision, with every phase and feature, is [01-full-plan.md](01-full-plan.md).
 
 ## In short
-After the phase 1 spike locked the tagging setup, phases 2 to 5 were built as one pass: backend, one-page UI, README and demo data. **All 14 acceptance criteria are met.** 291 tests pass without an API key, and a live audit against real Gemini passed 48 of 48 checks. Still to do: the demo recording and the submission.
+After the phase 1 spike locked the tagging setup, phases 2 to 5 were built as one pass: backend, one-page UI, README and demo data. **All 14 acceptance criteria are met.** 291 tests pass without an API key, and a live audit against real Gemini passed 48 of 48 checks. Still to do: the demo recording.
+
+Some of the planned UI was deliberately **deferred**, not dropped. The aim of v1 is a proof of concept that Gemini's tags are good enough to search by, and the project ran long, so the more advanced browsing and feedback features were postponed to a later version. The table below lists them.
 
 ## Scope
-| Cut | Replaced by |
+| Deferred | Built instead |
 |---|---|
 | F4 category and place chips, `GET /api/facets`, journey J3 | The search box. Tags in the detail view are clickable and run a search |
 | The `/image/{id}` page and back/forward-cache handling | A `<dialog>` detail view on the one page |
@@ -42,12 +44,12 @@ After the phase 1 spike locked the tagging setup, phases 2 to 5 were built as on
 | After the plan | Photo-style demo images, `agents.md` brought up to date, dead code removed, a port 3000 preview config | `676a3b2`, `02a32b3`, `8baccb8`, `6f7633f` |
 
 ## Where the build departed from the approved plan
-1. **The free-tier quota was a real constraint.** The plan said flash-lite "has not hit a quota yet". The first live run failed on all 7 uploads because `.env` still named `gemini-3.5-flash`, which allows 20 requests per day. My first retry logic then retried that daily quota pointlessly, so retries now depend on Google's suggested wait. Corrections #30 and #32.
+1. **The free-tier quota was a real constraint.** The plan said flash-lite "has not hit a quota yet". The first live run failed on all 7 uploads because `.env` still named `gemini-3.5-flash`, which allows 20 requests per day. The first retry logic then retried that daily quota pointlessly, so retries now depend on Google's suggested wait. Corrections #30 and #32.
 2. **The prompt needed two more drafts, not one,** to stop landmark photos getting an invented city. Drafts 2 and 3 fixed Milan and the Arc de Triomphe.
 3. **A fresh-context review found gaps the plan didn't anticipate:** tagging tasks that could starve the API of threads, an image left pending if a database write failed, a 500 on a huge id, no bound on AC-1's 60 s, a cross-site POST that could spend the quota, and UI races. All were fixed. Correction #33.
 4. **The tests landed in different files:** `test_api.py` and `test_db.py` instead of the planned `test_upload.py` and `test_flow.py`, plus tests for the demo scripts.
 5. **Photo-style demo images were added** so the library looks like a real one. They are drawn, not photographed, and their tags are marked `dummy-data`.
-6. **The README was trimmed by the owner after the build** (`5de5e3f`). The cut list and the spike summary now live only in `planning/`.
+6. **The README was trimmed by the owner after the build** (`5de5e3f`). The list of deferred features and the spike summary now live only in `planning/`.
 
 ## Acceptance criteria: status and evidence
 | AC | Status | Evidence |
@@ -79,5 +81,5 @@ After the phase 1 spike locked the tagging setup, phases 2 to 5 were built as on
 - **The evidence is small.** The prompt was tuned on 7 synthetic and 5 real images, so the numbers are "tuned-on". The owner also reports that real Instagram images and personal photos tagged successfully. That is informal and was not scored.
 - **The free tier is small and uneven.** Limits are per model and not published. `gemini-3.5-flash` allows 20 requests per day, while flash-lite handled about 50 calls in a day.
 - **Not tested:** a re-upload racing a delete, heavy load, and the Windows locked-file delete in real use.
-- **Still to do:** the demo recording and the submission.
-- **Stale on purpose:** [design.md](../design/design.md) still describes the chips, toasts and separate detail page. A banner at the top lists what was superseded.
+- **Still to do:** the demo recording.
+- **Future work:** the deferred UI features in the Scope table (chips, "Load more", a separate detail page, toasts, per-card polling, the drag-over outline). [design.md](../design/design.md) keeps their designs, each with a "Designed but not built" note giving the reasoning.
