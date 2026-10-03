@@ -4,6 +4,7 @@ change later. tag_image() takes image bytes and returns a validated TagResult.""
 import functools
 import hashlib
 import os
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -46,6 +47,10 @@ PROMPT_HASH = hashlib.sha256((SYSTEM_PROMPT + USER_PROMPT).encode()).hexdigest()
 # gemini-3.5-flash took 20 to 60 s when the service was busy, which is one more
 # reason it isn't the default.
 MAX_OUTPUT_TOKENS = 8192
+# A busy service is worth retrying only if it suggests a short wait. A daily quota
+# (gemini-3.5-flash allowed 20 requests per day on the free tier) says hours, so
+# retrying is futile.
+MAX_RETRY_WAIT_S = 30
 REQUEST_TIMEOUT_MS = 45_000
 
 RESPONSE_SCHEMA = TagResult.model_json_schema()
@@ -78,15 +83,18 @@ class TaggingError(Exception):
     The raw cause is chained as __cause__ for debugging. Log at most its type:
     a ValidationError's .errors() still carries the model's output, which is text
     from the screenshot (rule 2). `usage` is set when a reply arrived but was
-    unusable, so a cut-off can be tuned against the token counts."""
+    unusable, so a cut-off can be tuned against the token counts. `transient` is
+    True when the service said "try later" (429 or 5xx), so a retry may succeed."""
 
     def __init__(
-        self, kind: ErrorKind, finish_reason: str | None = None, usage: Usage | None = None
+        self, kind: ErrorKind, finish_reason: str | None = None, usage: Usage | None = None,
+        transient: bool = False,
     ) -> None:
         super().__init__(MESSAGES[kind])
         self.kind = kind
         self.finish_reason = finish_reason
         self.usage = usage
+        self.transient = transient
 
     @property
     def message(self) -> str:
@@ -136,7 +144,9 @@ def tag_image_with_usage(
     try:
         response = client.models.generate_content(model=name, contents=contents, config=config)
     except errors.APIError as exc:
-        raise TaggingError("rate_limit" if exc.code == 429 else "other") from exc
+        delay = _suggested_wait(exc)
+        busy = (exc.code == 429 or exc.code >= 500) and (delay is None or delay <= MAX_RETRY_WAIT_S)
+        raise TaggingError("rate_limit" if exc.code == 429 else "other", transient=busy) from exc
     except Exception as exc:  # timeouts and network errors are not APIError
         raise TaggingError("other") from exc
 
@@ -150,6 +160,18 @@ def tag_image_with_usage(
     except ValidationError as exc:
         raise TaggingError("bad_response", usage.finish_reason, usage) from exc
     return result, usage
+
+
+def _suggested_wait(exc: errors.APIError) -> float | None:
+    """Seconds Google says to wait before retrying, read from the structured error
+    details (never the message text). A daily quota reports hours."""
+    details = exc.details if isinstance(exc.details, dict) else {}
+    items = details.get("error", {}).get("details", [])
+    for item in items if isinstance(items, list) else []:
+        if isinstance(item, dict) and str(item.get("@type", "")).endswith("RetryInfo"):
+            found = re.fullmatch(r"(\d+(?:\.\d+)?)s", str(item.get("retryDelay", "")))
+            return float(found.group(1)) if found else None
+    return None
 
 
 def _usage(response: types.GenerateContentResponse) -> Usage:

@@ -227,6 +227,68 @@ def test_an_unusable_reply_is_a_bad_response(use_fake: Callable[[object], FakeMo
     assert SECRET not in str(caught.value.__cause__)
 
 
+@pytest.mark.parametrize(
+    ("failure", "transient"),
+    [
+        (api_error(errors.ClientError, 429, "RESOURCE_EXHAUSTED"), True),
+        (api_error(errors.ServerError, 503, "UNAVAILABLE"), True),
+        (api_error(errors.ServerError, 500, "INTERNAL"), True),
+        (api_error(errors.ClientError, 400, "INVALID_ARGUMENT"), False),
+        (api_error(errors.ClientError, 404, "NOT_FOUND"), False),
+        (TimeoutError(SECRET), False),
+    ],
+)
+def test_only_a_busy_service_is_transient(
+    use_fake: Callable[[object], FakeModels], failure: Exception, transient: bool
+) -> None:
+    use_fake(failure)
+
+    with pytest.raises(TaggingError) as caught:
+        tag_image(b"x", "image/png")
+
+    assert caught.value.transient is transient
+
+
+def quota_error(code: int, retry_delay: str | None) -> errors.APIError:
+    details: list[dict[str, object]] = [{"@type": "type.googleapis.com/google.rpc.QuotaFailure", "violations": []}]
+    if retry_delay is not None:
+        details.append({"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": retry_delay})
+    cls = errors.ClientError if code < 500 else errors.ServerError
+    return cls(code, {"error": {"code": code, "message": SECRET, "status": "RESOURCE_EXHAUSTED", "details": details}})
+
+
+@pytest.mark.parametrize(
+    ("failure", "transient"),
+    [
+        (quota_error(429, "12s"), True),  # a per-minute limit: wait and retry
+        (quota_error(429, "30s"), True),
+        (quota_error(429, "42034s"), False),  # a daily quota: retrying is futile
+        (quota_error(429, "banana"), True),  # an unreadable hint is as unknown as none
+        (quota_error(429, None), True),  # no hint: assume it is brief (retries are capped at two)
+        (quota_error(503, "5s"), True),
+    ],
+)
+def test_a_long_suggested_wait_is_not_worth_retrying(
+    use_fake: Callable[[object], FakeModels], failure: Exception, transient: bool
+) -> None:
+    use_fake(failure)
+
+    with pytest.raises(TaggingError) as caught:
+        tag_image(b"x", "image/png")
+
+    assert caught.value.transient is transient
+    assert SECRET not in str(caught.value)
+
+
+def test_an_unusable_reply_is_not_transient(use_fake: Callable[[object], FakeModels]) -> None:
+    use_fake(reply("not json"))
+
+    with pytest.raises(TaggingError) as caught:
+        tag_image(b"x", "image/png")
+
+    assert caught.value.transient is False
+
+
 def test_a_cut_off_reply_reports_its_token_counts(use_fake: Callable[[object], FakeModels]) -> None:
     use_fake(reply(TRUNCATED, types.FinishReason.MAX_TOKENS))
 

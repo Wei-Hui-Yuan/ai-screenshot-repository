@@ -1,10 +1,13 @@
 import io
 import random
+import types
+from pathlib import Path
 
 import pytest
 from PIL import Image, UnidentifiedImageError
 
-from app.images import MAX_EDGE, compress
+from app import images
+from app.images import MAX_BYTES, MAX_EDGE, RejectedImage, check_upload, compress, sha256, store
 
 ORIENTATION = 0x0112
 CAMERA_MAKE = 0x010F
@@ -118,3 +121,85 @@ def test_a_truncated_image_is_rejected() -> None:
 
     with pytest.raises(OSError):  # Pillow says "image file is truncated"
         compress(whole[: len(whole) // 2])
+
+
+# --- checking an upload (AC-6, hard rule 6) ------------------------------------
+
+
+@pytest.mark.parametrize("fmt", ["PNG", "JPEG", "WEBP"])
+def test_the_three_allowed_types_are_accepted(fmt: str) -> None:
+    check_upload(encode(Image.new("RGB", (40, 40), "teal"), fmt))
+
+
+@pytest.mark.parametrize("fmt", ["GIF", "BMP", "TIFF"])
+def test_other_real_image_types_are_refused(fmt: str) -> None:
+    with pytest.raises(RejectedImage, match="not PNG, JPEG or WebP"):
+        check_upload(encode(Image.new("RGB", (40, 40)), fmt))
+
+
+def test_the_type_comes_from_the_content_not_the_name_or_a_header() -> None:
+    check_upload(encode(Image.new("RGB", (40, 40)), "PNG"))  # accepted whatever it is called
+    with pytest.raises(RejectedImage, match="not PNG, JPEG or WebP"):
+        check_upload(b"<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>")
+    with pytest.raises(RejectedImage, match="not PNG, JPEG or WebP"):
+        check_upload(b"")
+
+
+def test_a_file_over_ten_megabytes_is_refused_before_anything_else() -> None:
+    with pytest.raises(RejectedImage, match="over 10 MB"):
+        check_upload(b"\0" * (MAX_BYTES + 1))
+
+
+def test_a_truncated_upload_is_unreadable() -> None:
+    whole = solid((200, 200))
+
+    with pytest.raises(RejectedImage, match="unreadable image"):
+        check_upload(whole[:80])
+
+
+@pytest.mark.parametrize("side", [10_000, 20_000])  # about 100 and 400 million pixels
+def test_a_decompression_bomb_is_unreadable(side: int) -> None:
+    bomb = encode(Image.new("1", (side, side)), "PNG")  # tiny file, huge when decoded
+    assert len(bomb) < MAX_BYTES
+
+    with pytest.raises(RejectedImage, match="unreadable image"):
+        check_upload(bomb)
+
+
+def test_the_hash_is_a_sha256_of_the_bytes() -> None:
+    assert sha256(b"abc") == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+
+
+def test_a_stored_file_is_written_whole_and_a_failure_leaves_nothing_behind(tmp_path: Path) -> None:
+    path = store(solid((50, 50)), "a" * 64, tmp_path)
+    assert [p.name for p in tmp_path.iterdir()] == [path.name]  # no temporary file left
+
+    with pytest.raises(OSError):
+        store(b"not an image", "b" * 64, tmp_path)
+
+    assert [p.name for p in tmp_path.iterdir()] == [path.name]
+
+
+def test_a_failed_move_into_place_leaves_no_temporary_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(source: object, target: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr(images, "os", types.SimpleNamespace(replace=broken))
+
+    with pytest.raises(OSError):
+        store(solid((50, 50)), "c" * 64, tmp_path)
+
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_the_stored_name_is_the_hash_whatever_the_upload_was_called(tmp_path: Path) -> None:
+    data = solid((300, 200))
+    digest = sha256(data)
+
+    path = store(data, digest, tmp_path)
+
+    assert path == tmp_path / f"{digest}.webp"
+    assert opened(path.read_bytes()).format == "WEBP"
+    assert [p.name for p in tmp_path.iterdir()] == [f"{digest}.webp"]

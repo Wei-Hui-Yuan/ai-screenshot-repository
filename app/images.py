@@ -1,7 +1,10 @@
-"""Image handling. Only compress() exists so far: validation, hashing and storage
-come in phase 2."""
+"""Image handling: check an upload, hash it, compress it, store it."""
 
+import hashlib
 import io
+import os
+import uuid
+from pathlib import Path
 
 from PIL import Image, ImageOps
 
@@ -9,6 +12,56 @@ from PIL import Image, ImageOps
 # files on the synthetic screenshots (see planning/spike-results.md).
 MAX_EDGE = 1600
 WEBP_QUALITY = 80
+
+MAX_BYTES = 10 * 1024 * 1024
+ALLOWED_FORMATS = {"PNG", "JPEG", "WEBP"}
+
+
+class RejectedImage(Exception):
+    """An upload we won't store. str() is the fixed message from design.md §6, safe
+    to show as-is."""
+
+
+def check_upload(data: bytes) -> None:
+    """Raise RejectedImage unless this is a real PNG, JPEG or WebP of a sane size.
+
+    The type comes from decoding the bytes, never from the file name (rule 6). The
+    whole image is decoded, which catches truncated files. Pillow's decompression-bomb
+    guard stays on, and its pixel limit is also checked here directly, because
+    Pillow only warns between one and two times the limit."""
+    if len(data) > MAX_BYTES:
+        raise RejectedImage("over 10 MB")
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            if image.format not in ALLOWED_FORMATS:
+                raise RejectedImage("not PNG, JPEG or WebP")
+            if Image.MAX_IMAGE_PIXELS and image.width * image.height > Image.MAX_IMAGE_PIXELS:
+                raise RejectedImage("unreadable image")
+            image.load()
+    except RejectedImage:
+        raise
+    except Image.UnidentifiedImageError as exc:
+        raise RejectedImage("not PNG, JPEG or WebP") from exc
+    except (OSError, ValueError, Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
+        raise RejectedImage("unreadable image") from exc
+
+
+def sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def store(data: bytes, digest: str, folder: Path) -> Path:
+    """Write the compressed copy as <sha256>.webp. The uploaded name is never used
+    (rule 3). It is written to a temporary file and moved into place, so a reader
+    never sees a half-written image."""
+    path = folder / f"{digest}.webp"
+    temp = folder / f"{digest}.{uuid.uuid4().hex}.tmp"
+    try:
+        temp.write_bytes(compress(data))
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+    return path
 
 
 def compress(data: bytes, max_edge: int = MAX_EDGE, quality: int = WEBP_QUALITY) -> bytes:
