@@ -2,7 +2,7 @@
 
 I screenshot things to remember them (places, food, recipes, articles, receipts) and then can't find them again. This is a small local web app for that: drop screenshots in, Gemini reads and tags each one, and typing a word like "kyoto" finds every screenshot about it, even a word that appears only in a screenshot's text.
 
-Built for the Pragnition Labs AI-native builder assessment with Claude Code as the coding agent. The planning notes, handoffs, a log of the agent's mistakes and the Gemini evaluation are in [`planning/`](planning/).
+The planning notes, handoffs, a log of the agent's mistakes and the Gemini evaluation are in [`planning/`](planning/).
 
 ## Run it
 
@@ -39,21 +39,14 @@ Tests need no key and never call Gemini: `pytest`. The Gemini evaluation does: `
 ## Trade-offs and limits
 
 - **Local only.** The server binds to `127.0.0.1`. No accounts, no hosting.
-- **Free-tier limits depend on the model, and they are not published.** When I measured it, `gemini-3.5-flash` allowed only **20 requests per day** and returned 503 on about half of my early calls. That is why the default is `gemini-3.1-flash-lite`: it handled about 50 calls in a day without a limit, at 3 to 12 s per call. If your own `.env` names another model, check its quota. When a quota runs out, the app marks an image failed with "Rate limit reached" and lets you retry later. Busy-service errors are retried automatically; a daily quota is not, since waiting would take hours.
+- **Free-tier limits depend on the model, and they are not published.**
+  The default is `gemini-3.1-flash-lite`: it handled about 50 calls in a day without a limit, at 3 to 12 s per call. If your own `.env` names another model, check its quota. When a quota runs out, the app marks an image failed with "Rate limit reached" and lets you retry later. Busy-service errors are retried automatically; a daily quota is not, since waiting would take hours.
 - **Free-tier inputs may be used by Google to improve its products,** so only upload non-sensitive screenshots. The page says so too.
 - **Keyword search, not meaning.** "Tokyo" finds Tokyo; "japanese noodles" won't find a ramen shop unless those words are in its tags or text.
 - **A place is filled only when the text states it.** A photo of a famous landmark with no caption gets no city, though the name can still appear in the title and tags, so search finds it. This is a deliberate rule, tuned in the spike.
 - **The personal-info flag is a second line of defence.** Gemini sets it after the image has already been sent to Google, so it only hides cards in your own library.
 - **English only**, and Gemini's `generate_content` call is marked "legacy but fully supported" by Google; it is isolated in `app/tagger.py`, so changing it later is a one-function job.
-- **Cut for time (and why):** category and place chips, a separate detail page, "load more", toasts, per-card polling and a hold-out evaluation. The assessment asks for judgment on a tight scope; [`planning/phase_plans/mvp.md`](planning/phase_plans/mvp.md) lists what was cut and what was kept.
 
-## How well does Gemini tag screenshots?
-
-That was the question the project was built to answer first. Short version, from [`planning/spike-results.md`](planning/spike-results.md): on 7 synthetic phone screenshots the locked setup passes every gate fixed before the first run (no invented places, stated places right, text-only words found, valid JSON), and compression to 1600 px cost nothing measurable. The evidence is small and the prompt was tuned on the same images, so treat it as a proof of the idea, not a benchmark.
-
-## Where the AI helped, and where it failed
-
-Claude Code planned the work, wrote the code and ran fresh-context reviewer agents that had not seen its reasoning. They caught real bugs before release, such as an upload id that could be reused so a late result tagged the wrong image, validation errors that echoed screenshot text, and a Pillow conversion that turned a 16-bit PNG pure white. Every mistake the AI made or caught is logged in [`planning/corrections.md`](planning/corrections.md), and the human confirmed or rejected each one.
 
 ## Layout
 
