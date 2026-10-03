@@ -58,6 +58,3 @@ class FakeTagger:
             raise outcome
         assert isinstance(outcome, TagResult)
         return outcome
-
-
-Outcome = TagResult | Exception | Callable[[], TagResult]

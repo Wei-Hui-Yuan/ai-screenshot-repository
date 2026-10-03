@@ -11,7 +11,6 @@ photos, so results on this set are reported separately.
 
 import argparse
 import json
-import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 

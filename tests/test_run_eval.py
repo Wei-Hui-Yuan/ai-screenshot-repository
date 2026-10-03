@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 from google.genai import errors
 from PIL import Image, UnidentifiedImageError
-from pydantic import ValidationError
 
 from app.schemas import TagResult
 from app.tagger import TaggingError, Usage
