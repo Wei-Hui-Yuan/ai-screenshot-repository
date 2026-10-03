@@ -11,7 +11,7 @@ Shared instructions for any coding agent working in this repo. Keep this file sh
 - v1 is local-only, English-only, with no accounts and no hosting.
 
 ## 2. Commands
-Planned in phase 0. Update this section if they change.
+Update this section if they change.
 
 ```
 python -m venv .venv
@@ -20,9 +20,11 @@ pip install -r requirements.txt
 uvicorn app.main:app --reload --reload-dir app --host 127.0.0.1 --port 8000
 pytest                            # no API key needed, Gemini is mocked
 python -m eval.run_eval           # real Gemini calls, needs GEMINI_API_KEY
+python -m eval.make_synthetic     # 7 fake phone screenshots in eval/synthetic/ (git-ignored)
+python -m eval.make_demo_images   # 10 photo-style fake screenshots in eval/demo/ (git-ignored)
 ```
 
-Config: copy `.env.example` to `.env`. Variables: `GEMINI_API_KEY`, `GEMINI_MODEL`.
+Config: copy `.env.example` to `.env`. Variables: `GEMINI_API_KEY`, `GEMINI_MODEL`. Optional: `DATA_DIR`, where the SQLite DB and stored images live (default `data`; the tests point it at a temp folder).
 
 ## 3. Layout and conventions
 ```
@@ -30,12 +32,12 @@ app/
   main.py      routes and startup
   db.py        all SQL lives here
   images.py    validate, hash, compress, store
-  tagger.py    the only module that talks to Gemini: tag_image(bytes) -> TagResult
+  tagger.py    the only module that talks to Gemini: tag_image(bytes, mime_type, model=None) -> TagResult
   search.py    FTS query building
   schemas.py   Pydantic models
   static/index.html
-tests/
-eval/          labels.json, images/ (public-safe only), run_eval.py
+tests/         conftest.py hides the API key and gives each test its own data dir; helpers.py has the fake tagger
+eval/          labels.json, images/ (public-safe only), run_eval.py, make_synthetic.py, make_demo_images.py
 data/          git-ignored: SQLite DB and stored images
 planning/
 ```
