@@ -3,7 +3,7 @@
 ## Context
 Phase 1 is about 90% done. We have the tagger, `compress()`, the schema and an eval harness, all tested (159 tests). The project is running long, so you asked to cut scope and to use **fake images** to prove the idea. This plan merges phases 2–5 into one pass, approved once.
 
-**Why this is safe:** the assessment values judgment and process over size ("2–3 hours is acceptable"). Every acceptance criterion except AC-3's size stays; only features outside the ACs are cut.
+**Why this is safe:** Every acceptance criterion except AC-3's size stays; only features outside the ACs are cut.
 
 **What the spike found (decides the plan):**
 - `gemini-3.1-flash-lite` works well: 4–12 s per call, G1–G5 all PASS on the synthetic set, the injection image was resisted and the personal-info flag fires. It has not hit a quota yet (18 calls today).
@@ -50,11 +50,8 @@ One `app/static/index.html`, vanilla JS, no build step, **`textContent` only** (
 ## Step 4: docs and demo (phase 5)
 - Run `python -m eval.run_eval` once on the synthetic set with the final prompt and record the result. The harness already exists (AC-14).
 - `README.md`: what it is, how to run it (AC-12), the trade-offs, and honest limits: free-tier quotas and 503s, English only, local only, Google may use free-tier inputs, Gemini's `generate_content` is labelled legacy, 20 requests/day on 3.5-flash.
-- Add a short "MVP scope" banner to `projectplan.md` and `design.md` listing what was cut. **I'll make these small edits only with your approval of this plan**, since they're your documents.
+- Add a short "MVP scope" banner to `projectplan.md` and `design.md` listing what was cut. 
 - Handoff 03, corrections, and the session-log export.
-
-## Rough time (my estimates, not measured)
-Step 1 about 20 min, step 2 about 60–75 min, step 3 about 45 min, step 4 about 45 min: roughly 3 hours, down from the original plan's remaining phases.
 
 ## Verification
 - `pytest -W error` in the venv with no key; fresh-clone check at the end (AC-11, AC-12).
