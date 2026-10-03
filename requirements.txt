@@ -1,0 +1,11 @@
+fastapi==0.142.2
+starlette==1.7.0           # FastAPI no longer caps it; pinned so fresh installs match
+uvicorn==0.54.0
+python-multipart==0.0.32   # FastAPI needs it to read file uploads
+pillow==12.3.0
+google-genai==2.28.0
+pydantic==2.13.5           # imported directly for the tag schema
+python-dotenv==1.2.4       # loads .env for the app and the eval script
+
+pytest==9.1.1
+httpx2==2.13.1             # Starlette's TestClient uses it (falls back to httpx with a warning)

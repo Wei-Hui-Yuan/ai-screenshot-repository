@@ -17,7 +17,7 @@ Planned in phase 0. Update this section if they change.
 python -m venv .venv
 .venv\Scripts\Activate.ps1        # Windows PowerShell
 pip install -r requirements.txt
-uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+uvicorn app.main:app --reload --reload-dir app --host 127.0.0.1 --port 8000
 pytest                            # no API key needed, Gemini is mocked
 python -m eval.run_eval           # real Gemini calls, needs GEMINI_API_KEY
 ```

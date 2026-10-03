@@ -1,0 +1,21 @@
+# Secrets (agents.md §4 rule 1). Only the template is committed.
+.env
+.env.*
+!.env.example
+
+# App data: the SQLite DB and stored screenshots (rule 1). Root only, so
+# folders like tests/data/ stay tracked.
+/data/
+
+# Safety net: a database outside data/ would still hold text from screenshots
+*.db
+*.db-*
+*.sqlite*
+
+# Python
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Per-user Claude Code permissions
+.claude/settings.local.json
