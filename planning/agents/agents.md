@@ -6,7 +6,7 @@ Shared instructions for any coding agent working in this repo. Keep this file sh
 - **What:** a local web app. Drag in screenshots, Gemini tags each one, search by a word like "tokyo".
 - **Stack:** Python 3.12, FastAPI, SQLite with FTS5, Pillow, `google-genai`. One HTML page with vanilla JS.
 - **v1 goal:** find out how well Gemini tags real screenshots. The eval matters as much as the app.
-- **Scope source of truth:** `planning/project_plan/projectplan.md`. Read the sections relevant to your task. Anything under "Out of scope" or "Future work" is off-limits unless asked.
+- **Scope source of truth:** `planning/project_plan/01-full-plan.md` (the original plan, each item tagged BUILT, CHANGED, CUT or LATER) and `planning/project_plan/02-mvp-outcome.md` (what was built). `planning/README.md` gives the reading order. Read the sections relevant to your task. Anything under "Out of scope" or "Future work" is off-limits unless asked.
 - **Start of every session:** read the latest file in `planning/handoffs/`.
 - v1 is local-only, English-only, with no accounts and no hosting.
 

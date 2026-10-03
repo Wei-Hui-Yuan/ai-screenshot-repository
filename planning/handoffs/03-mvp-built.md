@@ -1,6 +1,6 @@
 # Handoff 03: Spike locked, backend and UI built
 Date: 2026-10-03
-Goal: Finish the phase 1 spike, cut scope for speed, and build the MVP (phases 2–5 merged, see `planning/phase_plans/mvp.md`).
+Goal: Finish the phase 1 spike, cut scope for speed, and build the MVP (phases 2–5 merged, see `planning/project_plan/02-mvp-outcome.md`).
 
 Done:
 - Spike locked (`planning/spike-results.md`): prompt `v1`, `gemini-3.1-flash-lite`, 1600 px WebP q80, 45 s timeout. Synthetic set passes G1–G5.
