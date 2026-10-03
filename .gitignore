@@ -12,6 +12,17 @@
 *.db-*
 *.sqlite*
 
+# Screenshots (rule 1): ignored everywhere, so a personal one can't be staged
+# by accident. Commit a public-safe eval image on purpose with `git add -f`.
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.heic
+
+# Eval output: holds text extracted from screenshots
+/eval/results/
+
 # Python
 .venv/
 __pycache__/
