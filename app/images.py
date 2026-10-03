@@ -5,8 +5,8 @@ import io
 
 from PIL import Image, ImageOps
 
-# Starting values from the plan. The phase 1 spike checks them against Gemini's
-# tagging quality and locks the final numbers here.
+# Locked by the phase 1 spike: tagging at 1600 px WebP q80 matched the original
+# files on the synthetic screenshots (see planning/spike-results.md).
 MAX_EDGE = 1600
 WEBP_QUALITY = 80
 

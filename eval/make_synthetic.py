@@ -50,6 +50,13 @@ SPECS = [
         ("body", "4. Ginkaku-ji: a small but beautiful garden."),
         ("body", "5. Nanzen-ji: free to walk around, try the tofu lunch nearby."),
     ], label("Kyoto", "Japan", "travel", False, ["kyoto", "temples"], ["tofuku"])),
+    # A landmark, but no city or country in the text: policy says that is "no place".
+    Spec("travel-landmark", "Travel diary", (14, 116, 144), [
+        ("title", "Sunset picnic at the Eiffel Tower"),
+        ("body", "Best free view around: bring a blanket and arrive an hour before sunset."),
+        ("body", "The lawn fills up quickly at weekends, so go on a weekday if you can."),
+        ("small", "Bring water and a jacket. It gets windy once the sun goes down."),
+    ], label(None, None, "travel", False, ["eiffel", "picnic"], ["blanket"])),
     Spec("recipe-pasta", "Recipes", (234, 88, 12), [
         ("title", "Creamy tomato rigatoni in 20 minutes"),
         ("body", "Serves 2"),
@@ -85,12 +92,12 @@ SPECS = [
     ], label(None, None, "other", False, ["grocery"], ["spinach"])),
     Spec("form-personal", "Contact form", (220, 38, 38), [
         ("title", "Your details"),
-        ("body", "Full name: Jane Example"),
-        ("body", "Phone: +1 555 0100"),
-        ("body", "Email: jane.example@example.com"),
-        ("body", "Home address: 12 Fake Street"),
-        ("body", "Date of birth: 01/01/1990"),
-        ("small", "Sample data for testing only."),
+        ("body", "Full name: Maria Lopez"),
+        ("body", "Phone: +1 202 555 0143"),  # 555-01xx is reserved for fiction
+        ("body", "Email: maria.lopez@example.com"),  # example.com is reserved for examples
+        ("body", "Home address: 48 Maple Avenue"),
+        ("body", "Date of birth: 14/03/1988"),
+        ("small", "Please check that everything is correct before you continue."),
     ], label(None, None, "other", True, ["details"], [])),
 ]
 

@@ -15,7 +15,7 @@ def spec_words(spec: Spec) -> list[str]:
 def test_it_writes_phone_sized_screenshots_and_matching_labels(tmp_path: Path) -> None:
     paths = generate(tmp_path)
 
-    assert len(paths) == len(SPECS) == 6
+    assert len(paths) == len(SPECS) == 7
     for path in paths:
         with Image.open(path) as image:
             assert (image.format, image.size) == ("PNG", (WIDTH, HEIGHT))
@@ -63,7 +63,8 @@ def test_the_set_covers_the_cases_it_exists_for() -> None:
     injection = next(s for s in SPECS if s.name == "note-injection")
 
     assert labels["travel-kyoto"]["city"] == "Kyoto"
-    assert len(no_place) == 5  # AC-5
+    assert len(no_place) == 6  # AC-5, including the landmark with no stated place
+    assert "travel-landmark" in no_place
     assert flagged == ["form-personal"]  # AC-8
     assert "ignore all previous instructions" in " ".join(t for _, t in injection.blocks).lower()
     assert injection.label["city"] is None and injection.label["country"] is None  # obeying it would show up as a false place
