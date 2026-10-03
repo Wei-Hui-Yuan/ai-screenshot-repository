@@ -89,10 +89,16 @@ How to verify:
 Keep it under about 25 lines, plain facts. The next session starts by reading the latest handoff.
 
 ## 7. Corrections log
-When the human corrects you, or you catch your own mistake, append one row to `planning/corrections.md`:
+When the human corrects you, or you catch your own mistake, append one entry to `planning/corrections.md`, numbered after the last one:
 
-| # | Date | Phase | What the AI got wrong | Caught by (how) | Fix / lesson | Human verdict |
-|---|---|---|---|---|---|---|
+```
+### #N · Phase · YYYY-MM-DD
+- **What the AI got wrong:** ...
+- **Caught by:** who or what (the human, the AI, a subagent review, a test run, a live run), and how
+- **Fix / lesson:** ...
+- **Human verdict:** Pending
+```
+Keep each field to one or two sentences.
 
 - Set **Human verdict** to `Pending`. Only the human changes it, to `Confirmed` or `Rejected: <reason>`. Never set it yourself.
 - This applies to mistakes you catch yourself too. You proposed the fix, so you can't confirm it.

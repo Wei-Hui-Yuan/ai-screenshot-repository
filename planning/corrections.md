@@ -4,38 +4,202 @@ Every time the AI gets something wrong, whoever catches it, it goes here. Rules 
 
 **Human verdict:** every entry starts as `Pending`. Only the human changes it, to `Confirmed` or `Rejected: <reason>`. A fix isn't a correction until the human confirms it's right.
 
-| # | Date | Phase | What the AI got wrong | Caught by (how) | Fix / lesson | Human verdict |
-|---|---|---|---|---|---|---|
-| 1 | 2026-10-03 | Planning | Proposed a list of 12 project ideas framed as solutions, before understanding the user's actual problems. | Human: rejected all of them and asked to approach it from a problem-solving standpoint. | Switched to problem-first discovery (criteria plus prompts about recurring pain points), which led to the screenshot problem. | Confirmed |
-| 2 | 2026-10-03 | Planning | Presented the `sensitive` flag as a privacy protection, but Gemini sets it after the image has already been sent. | AI: while checking Google's Gemini API terms. | Renamed to `contains_personal_info` and described as a second line of defence. Privacy relies on uploading only non-sensitive screenshots, plus a dropzone warning. | Confirmed |
-| 3 | 2026-10-03 | Planning | The first project plan draft referenced `decisions.md`, a file that didn't exist. | AI: self-review of the draft. | Moved the decision log into section 11 of the project plan. | Confirmed |
-| 4 | 2026-10-03 | Planning | The corrections rule in `agents.md` let the AI record its own fixes as corrections without human sign-off. | Human: pointed out that the human must confirm whether any correction is right. | Added the Human verdict column. Every entry starts `Pending` and only the human sets it. | Confirmed |
-| 5 | 2026-10-03 | Planning (design) | The design draft claimed "Text contrast meets WCAG AA in both themes", but two light-theme pairs failed: `--muted` on `--surface` (4.40:1) and `--danger` on `--surface` (4.43:1). | AI: a fresh-context accessibility reviewer (subagent) computed the ratios. Re-checked with a script. | Light `--muted` changed to `#57534e`, light `--danger` to `#b91c1c`, and a `--border-strong` token added. The script shows all 30 pairs pass. Lesson: compute contrast, don't assert it. | Confirmed |
-| 6 | 2026-10-03 | Planning (design) | The draft polled only while a visible card was pending. With a search or filter active, new uploads would never show or update, the tagging-failed toast would never fire (J1, J5), and newly flagged images would stay visible (AC-8). | AI: completeness and scope reviewers (subagents). | The page now tracks pending IDs, polls `status=pending`, replaces cards one at a time, removes newly flagged cards with a toast, and clears filters after an upload. | Confirmed |
-| 7 | 2026-10-03 | Planning (design) | The draft over-scoped the UI: a "Show flagged (3)" count needing data no planned endpoint returns, and about 15 behaviours (reviewer's estimate: 80–100 min) for a 45-minute phase, with no priority order. | AI: scope and completeness reviewers (subagents). | Plain checkbox with no count. Cut the pulse animation, `/` shortcut, drop overlay, delete toast and duplicate retry button. Added a build order and cut list. | Confirmed |
-| 8 | 2026-10-03 | Planning (design) | The draft never said how one HTML file serves two routes, which would likely push an implementing agent into building a client-side router outside the plan. | AI: scope reviewer (subagent). The completeness reviewer flagged the same gap. | Full page loads through real links, the server returns `index.html` for both routes, and URL query keys match the API's. | Confirmed |
-| 9 | 2026-10-03 | Planning (design) | The revised draft assumed every Back was a fresh page load and used `history.back()` for "<- Library". Browsers restore pages from the back/forward cache, so after Retry or Delete the old page would come back with out-of-date data (J5, AC-8). "<- Library" also did nothing in a new tab. | AI: second-round regression reviewer (subagent). | Both views reload when restored from the cache (`pageshow`). "<- Library" is a real link plus the saved query, and Delete uses `location.replace`. | Confirmed |
-| 10 | 2026-10-03 | Planning (design) | The revised draft's toast rules contradicted each other. The 3-toast cap could remove error toasts meant to stay, each failed image fired its own toast, and "Uploading..." had a 5 s timer. Upload rejection messages weren't defined, so raw exception text could reach the user (AC-6). | AI: second-round regression reviewer (subagent). | At most one grouped toast per poll, a cap rule that keeps errors, no timer on "Uploading...", and fixed server messages for rejections and tagging failures. | Confirmed |
-| 11 | 2026-10-03 | Planning (design) | No version of the design said that server data must be shown as plain text. Text Gemini extracts from a screenshot could have been inserted as HTML and run script in the browser (stored XSS). | AI: noticed while fixing how file names are shown in the upload summary. | Added the principle "Data is text, never HTML" (`textContent` only, `encodeURIComponent` for URLs). Proposed it as a hard rule in `agents.md`. | Confirmed |
-| 12 | 2026-10-03 | Phase 0 (plan) | The draft plan listed `httpx` as the package FastAPI's TestClient needs, from memory. FastAPI 0.142.2 doesn't cap Starlette, so a fresh install resolves to Starlette 1.7.0, whose TestClient imports `httpx2` and falls back to `httpx` with a deprecation warning. | AI: fresh-context plan reviewer (subagent). Confirmed by reading `starlette/testclient.py` at tag 1.7.0 and the PyPI metadata. | `requirements.txt` uses `httpx2==2.13.1` and pins `starlette==1.7.0`, since FastAPI no longer caps it. Lesson: check dependency claims against the version being installed, not memory. | Confirmed |
-| 13 | 2026-10-03 | Phase 0 (plan) | The draft's verification used `git check-ignore -v` to show `.env.example` is not ignored. With `-v`, a `!` negation match is printed and exits 0, so the file would have looked ignored. | AI: fresh-context plan reviewer (subagent), from git's `check-ignore.c`. | Paths that must be ignored are checked with `-v`. Paths that must not be are checked without `-v`, expecting no output and exit 1. | Confirmed |
-| 14 | 2026-10-03 | Phase 0 (plan) | The draft's checks ran bare `pip`, `pytest` and `uvicorn`, without checking global Python. It already has fastapi 0.139.2, uvicorn 0.51.0, pytest and watchfiles, so a check could have used them, passed falsely, and hidden the reloader scanning `.venv`. | AI: fresh-context plan reviewer (subagent). Confirmed with `pip list` on global Python. | Every check runs through `.venv\Scripts\python.exe -m ...`. The §2 command is checked in one shell after activation, confirming `pytest` resolves to `.venv`. | Confirmed |
-| 15 | 2026-10-03 | Phase 0 (plan) | The draft plan existed only in `~/.claude/plans` (plan mode's location), but the assessment brief requires agent-generated plans in `planning/`. | AI: fresh-context plan reviewer (subagent). | The approved plan is saved as `planning/phase_plans/phase-0.md`. | Confirmed |
-| 16 | 2026-10-03 | Phase 0 | `.gitignore` used `data/`, which ignores a `data` folder at any depth. A future `tests/data/` or `eval/data/` would have silently dropped out of git and broken a fresh clone (AC-12). My own ignore check only tried root-level paths, so it missed this. | AI: fresh-context end-of-phase reviewer (subagent), using `git check-ignore --no-index`. | Changed to `/data/` (root only), and re-checked both nested paths and root paths. Lesson: test ignore rules with paths that should *not* match, not only ones that should. | Confirmed |
-| 17 | 2026-10-03 | Phase 1 (plan) | The draft's `TagResult` had no protection against Pydantic's error text. `str(ValidationError)` echoes part of the input, so a truncated Gemini reply would put screenshot text into an error message, breaking hard rule 2 wherever that error is printed or logged. | AI: fresh-context plan reviewer (subagent). I re-tested it with a synthetic string: leaks by default, doesn't with the fix. | `ConfigDict(hide_input_in_errors=True)` on `TagResult`. The harness records only the error type, `kind` and finish reason, never `str(e)`. A test asserts a bad value never appears in the error text. | Confirmed |
-| 18 | 2026-10-03 | Phase 1 (plan) | The draft let SDK exceptions propagate out of `tagger.py` and didn't guard `response.text` being `None` (blocked prompt, SAFETY stop, thought-only parts) or truncated JSON from MAX_TOKENS. Only `tagger.py` may import the SDK, so phase 2 couldn't have caught these cleanly or shown the fixed design §6 messages (AC-7). | AI: fresh-context plan reviewer (subagent). | `tagger.py` raises `TaggingError(kind, finish_reason)` with the fixed messages, plus a bounded `max_output_tokens`. A fake-client test covers each case: empty, blocked, MAX_TOKENS, 429, timeout, invalid JSON. | Confirmed |
-| 19 | 2026-10-03 | Phase 1 (plan) | The draft's "Verified facts" presented a docs summariser's output as verified (model ids, thinking defaults, an image-token rule), including a model id the installed SDK doesn't list (`gemini-3.5-flash-lite`). Its "empty API key" blocker was a snapshot taken before the human saved `.env`. | AI: fresh-context plan reviewer (subagent). I re-checked the SDK's model list and `.env`. | Facts are split into source-verified and summariser-sourced (unverified until the first real call). The token claim and the unlisted model were dropped, and the blocker is reported as stale. Lesson: say how each fact was checked, and re-check state before reporting a blocker. | Confirmed |
-| 20 | 2026-10-03 | Phase 1 (plan) | The draft tuned the prompt and judged results on the same ~5 images, set no pass/fail thresholds before running, had no noise floor, and recorded no token counts. The size comparison could have measured nothing and the numbers would have looked better than they are. | AI: fresh-context plan reviewer (subagent). | Spike numbers are labelled "tuned-on" and the rest of the screenshots stay unseen as the phase 5 hold-out. Thresholds G1–G5 are fixed before the first run, the `original` arm runs twice, and `tag_image_with_usage` records tokens. Labels are frozen first. | Confirmed |
-| 21 | 2026-10-03 | Phase 1 (plan) | The draft's `compress()` used `convert("RGB")`, which turns transparent pixels black, so dark text on a transparent PNG would become unreadable. Its "no EXIF" test would also pass trivially on an input that has no EXIF. | AI: fresh-context plan reviewer (subagent), who verified both with Pillow 12.3. | Composite onto white before converting. Tests use a transparent PNG and an input with EXIF orientation=6, so they can fail. | Confirmed |
-| 22 | 2026-10-03 | Phase 1 (plan) | The draft left key lookup to `genai.Client()`. The SDK prefers `GOOGLE_API_KEY` over `GEMINI_API_KEY` and falls back to the environment when `api_key` is empty, which contradicts AC-12 ("only `GEMINI_API_KEY`"). It also set no request timeout, so a stalled call would hang (AC-1). | AI: fresh-context plan reviewer (subagent). I confirmed the precedence in `_api_client.py` (lines 129–143, 716–719). | `tagger.py` reads `GEMINI_API_KEY` itself, fails clearly if empty, and passes it explicitly with `HttpOptions(timeout=...)`. The timeout is tuned in the spike. | Confirmed |
-| 23 | 2026-10-03 | Phase 1 | Two of my own new tests had wrong expectations. One asserted G5 fails at 9 valid of 10 attempted, which is exactly the 90% target and passes. The other expected a query to match only the title, but the fixture's summary also contained the word. | AI: pytest failed on both when I first ran them. | I fixed the tests, not the code, and said so at the time: the code was right in both cases. Lesson: work out boundary arithmetic before writing the assertion. | Confirmed |
-| 24 | 2026-10-03 | Phase 1 | The eval harness never computed G4 (the text-only query gate), though I had fixed G4 in the approved plan before any run. The labels format had no way to say which queries are text-only, so `text_only_hits` read 0 whenever the model also tagged the word. | AI: fresh-context code reviewer (subagent), rated high. | Labels gain an optional `text_queries` key and the summary now reports G4. | Confirmed |
-| 25 | 2026-10-03 | Phase 1 | The harness could report PASS for G1–G3 on the images that happened to succeed while other labelled calls had failed or were rate-limited. Its output also couldn't show the plan's size rule ("loses nothing the original passed"), only group totals where swapped failures cancel out. "Unstable cells" printed 0 without repeats, which looks like stability. | AI: fresh-context code reviewer (subagent), who ran a case with 3 of 5 calls rate-limited. | Gates say `INCOMPLETE` when any labelled call has no score. A per-image grid and a "Lost vs original" line show the size rule. Instability is n/a without repeats and ignores rate limits. | Confirmed |
-| 26 | 2026-10-03 | Phase 1 | `compress()` turned a 16-bit greyscale PNG into pure white with no error, so Gemini would have been sent a blank image and returned garbage tags. | AI: fresh-context code reviewer (subagent). I reproduced it: mode `I;16` value 30000 became (255, 255, 255). | Scale 16-bit modes to 8-bit before converting, with a test that checks the brightness survives. | Confirmed |
-| 27 | 2026-10-03 | Phase 1 | My tests were weaker than they looked. In a mutation check, two deliberate bugs passed all tests: G2 using `any` instead of `all` (the test had one row), and `run()` never marking rows as labelled (only hand-built rows were tested). | AI: my own mutation check (rewriting the harness source in memory, one bug at a time), after the review. | Added a two-row G2 test and a real-run test of the labelled flag. All 9 mutants are now caught. | Confirmed |
-| 28 | 2026-10-03 | Phase 1 | Smaller problems in my first version of the harness and tagger. Failed calls lost their token counts, which are what you need to tune `max_output_tokens`. Query matching treated `ramen_shop` as one word and ignored accents, unlike FTS5. A code comment stated as fact that Gemini writes fields in schema order, which I hadn't verified. | AI: fresh-context code reviewer (subagent). | `TaggingError` carries `usage`. The tokenizer splits on underscores and folds accents. The schema sends `propertyOrdering`, and the comments now say the order is requested and checked in the spike. | Confirmed |
-| 29 | 2026-10-03 | Phase 2 | My `images` table used `INTEGER PRIMARY KEY` without `AUTOINCREMENT`, so after the newest image was deleted its id was handed to the next upload. A background tagging task for the deleted image could then finish late and write its tags onto the new, unrelated image. | AI: my own test run. A test I wrote with a wrong assumption failed, and tracing why showed the id reuse. | `AUTOINCREMENT`, plus tests that an id is never reused and that a late result for a deleted image is discarded. With the old schema two tests fail. | Confirmed |
-| 30 | 2026-10-03 | Phase 2 | The first backend retried every 429 after 5 s and 15 s, including a daily quota whose error says to retry in about 11 hours. Each such image held a tagging slot for 20 s for nothing. | AI: the live run against the real API, where all 7 uploads failed this way. | `_suggested_wait` reads Google's structured retry hint, and only waits of 30 s or less count as transient. Tests cover short, long, missing and unreadable hints. | Confirmed |
-| 31 | 2026-10-03 | Phase 2 | I wrote a test expecting an unreadable retry hint to mean "don't retry", which contradicted the code's own design (unreadable is as unknown as no hint). | AI: pytest failed. | I fixed the test, not the code, and said so at the time. Lesson: decide the behaviour before writing the assertion. | Confirmed |
-| 32 | 2026-10-03 | Phase 2 | I told the human "gemini-3.1-flash-lite is also capped at 20 requests per day" and wrote that into the README. It was wrong. My probe didn't pass `--model`, so it ran on the `.env` model (`gemini-3.5-flash`), and the live app read that same `.env` value. Flash-lite had made about 50 calls that day without a limit. | AI: I noticed that 39 successful flash-lite calls contradicted a limit of 20, and re-ran the probe with the model stated. | Corrected the README, code comment and spike results, and re-ran the live check with the model set explicitly (all 7 tagged in 17 s). Lesson: pass the model explicitly in every probe, and check a surprising result against what you already know. | Confirmed |
-| 33 | 2026-10-03 | Phase 2–3 | My first backend and UI had several robustness gaps. Tagging tasks shared the request thread pool and could starve the API. A failing database write left an image pending forever. A huge id returned a 500. AC-1's 60 s wasn't bounded (3 x 45 s plus waits). A page on another site could POST uploads and spend the quota. The UI let a slow old search overwrite a newer one, stacked polling timers, rebuilt the grid every 2 s (losing focus and reloading thumbnails) and stopped polling after one failed request. | AI: fresh-context reviewer (subagent) on the finished backend and UI. | A dedicated 3-thread pool, guarded outcome recording, bounded ids, a 50 s retry deadline, an Origin check, a request counter, change detection and a retry timer. Each fix has a test or a browser check. My mutation check then found two of the new tests passing by accident, and I fixed them. | Confirmed |
+> **Condensed.** Entries #1 to #33 were shortened after the human had confirmed them, and the verdicts were given on the original wording. Numbers, dates, phases, who or what caught each mistake, and the verdicts are unchanged. The long form of every entry is in Git: [corrections.md before condensing](https://github.com/Wei-Hui-Yuan/ai-screenshot-repository/blob/6f7633fc73cfb942b0a273e954b4fb32c0b8bf1e/planning/corrections.md).
+
+### #1 · Planning · 2026-10-03
+- **What the AI got wrong:** Proposed 12 project ideas as solutions before understanding the user's actual problems.
+- **Caught by:** Human, who rejected all 12 and asked for a problem-solving approach.
+- **Fix / lesson:** Switched to problem-first discovery, which led to the screenshot problem.
+- **Human verdict:** Confirmed
+
+### #2 · Planning · 2026-10-03
+- **What the AI got wrong:** Presented the `sensitive` flag as a privacy protection, but Gemini sets it after the image has been sent.
+- **Caught by:** AI, while checking Google's Gemini API terms.
+- **Fix / lesson:** Renamed to `contains_personal_info`, a second line of defence. Privacy relies on non-sensitive uploads plus a dropzone warning.
+- **Human verdict:** Confirmed
+
+### #3 · Planning · 2026-10-03
+- **What the AI got wrong:** The first plan draft referenced `decisions.md`, a file that didn't exist.
+- **Caught by:** AI, self-review of the draft.
+- **Fix / lesson:** Moved the decision log into section 11 of the project plan.
+- **Human verdict:** Confirmed
+
+### #4 · Planning · 2026-10-03
+- **What the AI got wrong:** The corrections rule in `agents.md` let the AI log its own fixes without human sign-off.
+- **Caught by:** Human, who pointed out that the human must confirm each correction.
+- **Fix / lesson:** Added a Human verdict. Entries start `Pending` and only the human changes it.
+- **Human verdict:** Confirmed
+
+### #5 · Planning (design) · 2026-10-03
+- **What the AI got wrong:** Claimed text contrast met WCAG AA, but two light-theme pairs failed: `--muted` on `--surface` (4.40:1) and `--danger` on `--surface` (4.43:1).
+- **Caught by:** AI, via a fresh-context accessibility reviewer (subagent), then re-checked with a script.
+- **Fix / lesson:** Darkened light `--muted` and `--danger` and added `--border-strong`. All 30 pairs pass. Compute contrast, don't assert it.
+- **Human verdict:** Confirmed
+
+### #6 · Planning (design) · 2026-10-03
+- **What the AI got wrong:** Polled only while a visible card was pending, so with a search active new uploads never showed, the failure toast never fired (J1, J5) and newly flagged images stayed visible (AC-8).
+- **Caught by:** AI, via completeness and scope reviewers (subagents).
+- **Fix / lesson:** Track pending IDs, poll `status=pending`, replace cards one at a time, remove newly flagged cards with a toast, clear filters after an upload.
+- **Human verdict:** Confirmed
+
+### #7 · Planning (design) · 2026-10-03
+- **What the AI got wrong:** Over-scoped the UI: a "Show flagged (3)" count no endpoint could supply, and about 15 behaviours (estimated 80–100 min) for a 45-minute phase, with no priorities.
+- **Caught by:** AI, via scope and completeness reviewers (subagents).
+- **Fix / lesson:** Plain checkbox, no count. Cut the pulse animation, `/` shortcut, drop overlay, delete toast and duplicate retry button. Added a build order and cut list.
+- **Human verdict:** Confirmed
+
+### #8 · Planning (design) · 2026-10-03
+- **What the AI got wrong:** Never said how one HTML file serves two routes, which would push an implementer toward a client-side router outside the plan.
+- **Caught by:** AI, via the scope reviewer (subagent). The completeness reviewer flagged it too.
+- **Fix / lesson:** Full page loads through real links, `index.html` served for both routes, URL query keys matching the API's.
+- **Human verdict:** Confirmed
+
+### #9 · Planning (design) · 2026-10-03
+- **What the AI got wrong:** Assumed every Back was a fresh load and used `history.back()` for "← Library". Browsers restore pages from the back/forward cache, so after Retry or Delete the old page would return stale (J5, AC-8), and the link did nothing in a new tab.
+- **Caught by:** AI, via a second-round regression reviewer (subagent).
+- **Fix / lesson:** Views reload on `pageshow` from the cache. "← Library" is a real link plus the saved query, and Delete uses `location.replace`.
+- **Human verdict:** Confirmed
+
+### #10 · Planning (design) · 2026-10-03
+- **What the AI got wrong:** Toast rules contradicted each other: the 3-toast cap could remove error toasts, each failed image fired its own toast, and "Uploading..." had a 5 s timer. Rejection messages were undefined, so raw exception text could reach the user (AC-6).
+- **Caught by:** AI, via a second-round regression reviewer (subagent).
+- **Fix / lesson:** One grouped toast per poll, a cap that keeps errors, no timer on "Uploading...", and fixed server messages.
+- **Human verdict:** Confirmed
+
+### #11 · Planning (design) · 2026-10-03
+- **What the AI got wrong:** The design never said server data must be shown as plain text, so text Gemini extracts could run as script (stored XSS).
+- **Caught by:** AI, while fixing how file names appear in the upload summary.
+- **Fix / lesson:** Added "Data is text, never HTML" (`textContent`, `encodeURIComponent`) and proposed it as a hard rule in `agents.md`.
+- **Human verdict:** Confirmed
+
+### #12 · Phase 0 (plan) · 2026-10-03
+- **What the AI got wrong:** Named `httpx` from memory as what TestClient needs. A fresh install resolves to Starlette 1.7.0, whose TestClient imports `httpx2` and falls back to `httpx` only with a deprecation warning.
+- **Caught by:** AI, via a fresh-context plan reviewer (subagent), confirmed in Starlette's source and PyPI metadata.
+- **Fix / lesson:** `requirements.txt` uses `httpx2` and pins `starlette==1.7.0`. Check dependency claims against the installed version, not memory.
+- **Human verdict:** Confirmed
+
+### #13 · Phase 0 (plan) · 2026-10-03
+- **What the AI got wrong:** Used `git check-ignore -v` to show `.env.example` isn't ignored, but `-v` prints a `!` negation match and exits 0, so it would look ignored.
+- **Caught by:** AI, via the plan reviewer (subagent).
+- **Fix / lesson:** Ignored paths are checked with `-v`. Paths that must not be ignored are checked without it, expecting no output and exit 1.
+- **Human verdict:** Confirmed
+
+### #14 · Phase 0 (plan) · 2026-10-03
+- **What the AI got wrong:** Checks ran bare `pip`, `pytest` and `uvicorn`, but global Python already has fastapi, uvicorn, pytest and watchfiles, so a check could pass falsely and hide the reloader scanning `.venv`.
+- **Caught by:** AI, via the plan reviewer (subagent), confirmed with `pip list`.
+- **Fix / lesson:** Every check runs through `.venv\Scripts\python.exe -m ...`, and the §2 command is checked after activation.
+- **Human verdict:** Confirmed
+
+### #15 · Phase 0 (plan) · 2026-10-03
+- **What the AI got wrong:** The plan existed only in `~/.claude/plans`, but the assessment brief requires agent plans in `planning/`.
+- **Caught by:** AI, via the plan reviewer (subagent).
+- **Fix / lesson:** Saved as `planning/phase_plans/phase-0.md`.
+- **Human verdict:** Confirmed
+
+### #16 · Phase 0 · 2026-10-03
+- **What the AI got wrong:** `.gitignore` used `data/`, which matches at any depth, so a future `tests/data/` or `eval/data/` would silently drop out of git and break a fresh clone (AC-12). The AI's own check only tried root-level paths.
+- **Caught by:** AI, via an end-of-phase reviewer (subagent), using `git check-ignore --no-index`.
+- **Fix / lesson:** Changed to `/data/` and re-checked nested and root paths. Test ignore rules with paths that should not match, too.
+- **Human verdict:** Confirmed
+
+### #17 · Phase 1 (plan) · 2026-10-03
+- **What the AI got wrong:** `TagResult` didn't guard against Pydantic's error text: `str(ValidationError)` echoes part of the input, so a truncated Gemini reply would put screenshot text in an error message (hard rule 2).
+- **Caught by:** AI, via the plan reviewer (subagent), re-tested with a synthetic string.
+- **Fix / lesson:** `ConfigDict(hide_input_in_errors=True)`. The harness records only the error type, `kind` and finish reason, never `str(e)`, and a test asserts a bad value never appears in an error.
+- **Human verdict:** Confirmed
+
+### #18 · Phase 1 (plan) · 2026-10-03
+- **What the AI got wrong:** SDK exceptions could escape `tagger.py`, and nothing guarded `response.text` being `None` (blocked prompt, SAFETY stop) or truncated JSON from MAX_TOKENS. Only `tagger.py` may import the SDK, so phase 2 couldn't handle these or show the fixed §6 messages (AC-7).
+- **Caught by:** AI, via the plan reviewer (subagent).
+- **Fix / lesson:** `tagger.py` raises `TaggingError(kind, finish_reason)` with fixed messages and a bounded `max_output_tokens`. A fake-client test covers empty, blocked, MAX_TOKENS, 429, timeout and invalid JSON.
+- **Human verdict:** Confirmed
+
+### #19 · Phase 1 (plan) · 2026-10-03
+- **What the AI got wrong:** "Verified facts" passed off a docs summariser's output as verified (model ids, thinking defaults, an image-token rule), including a model id the SDK doesn't list. The "empty API key" blocker was a snapshot from before the human saved `.env`.
+- **Caught by:** AI, via the plan reviewer (subagent), re-checked against the SDK and `.env`.
+- **Fix / lesson:** Facts split into source-verified and summariser-sourced; the token claim and unlisted model dropped; the blocker reported as stale. Say how each fact was checked, and re-check state before reporting a blocker.
+- **Human verdict:** Confirmed
+
+### #20 · Phase 1 (plan) · 2026-10-03
+- **What the AI got wrong:** Tuned the prompt and judged results on the same ~5 images, set no pass/fail thresholds beforehand, had no noise floor and recorded no token counts, so the numbers would look better than they are.
+- **Caught by:** AI, via the plan reviewer (subagent).
+- **Fix / lesson:** Spike numbers labelled "tuned-on", with the other screenshots held out for phase 5. Thresholds G1–G5 fixed before the first run, the `original` arm run twice, tokens recorded, labels frozen first.
+- **Human verdict:** Confirmed
+
+### #21 · Phase 1 (plan) · 2026-10-03
+- **What the AI got wrong:** `compress()` used `convert("RGB")`, turning transparent pixels black, so dark text on a transparent PNG would be unreadable. The "no EXIF" test would also pass on an input with no EXIF.
+- **Caught by:** AI, via the plan reviewer (subagent), who verified both with Pillow.
+- **Fix / lesson:** Composite onto white first. Tests use a transparent PNG and EXIF orientation=6, so they can fail.
+- **Human verdict:** Confirmed
+
+### #22 · Phase 1 (plan) · 2026-10-03
+- **What the AI got wrong:** Left key lookup to `genai.Client()`: the SDK prefers `GOOGLE_API_KEY` and falls back to the environment when `api_key` is empty, contradicting AC-12 ("only `GEMINI_API_KEY`"). No request timeout either, so a stalled call would hang (AC-1).
+- **Caught by:** AI, via the plan reviewer (subagent), precedence confirmed in the SDK source.
+- **Fix / lesson:** `tagger.py` reads `GEMINI_API_KEY` itself, fails clearly if empty, and passes it with `HttpOptions(timeout=...)`. The timeout is tuned in the spike.
+- **Human verdict:** Confirmed
+
+### #23 · Phase 1 · 2026-10-03
+- **What the AI got wrong:** Two new tests had wrong expectations: one asserted G5 fails at 9 valid of 10 (exactly the 90% target, which passes), the other expected a title-only match though the fixture's summary also contained the word.
+- **Caught by:** AI, when pytest failed at first run.
+- **Fix / lesson:** Fixed the tests, not the code, which was right. Work out boundary arithmetic before writing the assertion.
+- **Human verdict:** Confirmed
+
+### #24 · Phase 1 · 2026-10-03
+- **What the AI got wrong:** The harness never computed G4 (text-only query gate), though G4 was fixed in the approved plan before any run. Labels couldn't mark text-only queries, so `text_only_hits` read 0 whenever the model also tagged the word.
+- **Caught by:** AI, via a fresh-context code reviewer (subagent), rated high.
+- **Fix / lesson:** Labels gain an optional `text_queries` key, and the summary reports G4.
+- **Human verdict:** Confirmed
+
+### #25 · Phase 1 · 2026-10-03
+- **What the AI got wrong:** The harness could report PASS for G1–G3 on the images that succeeded while other labelled calls failed or were rate-limited. It showed only group totals where swapped failures cancel out, and "Unstable cells" printed 0 without repeats, which looks like stability.
+- **Caught by:** AI, via a code reviewer (subagent), who ran a case with 3 of 5 calls rate-limited.
+- **Fix / lesson:** Gates say `INCOMPLETE` when any labelled call has no score. Added a per-image grid and a "Lost vs original" line. Instability is n/a without repeats and ignores rate limits.
+- **Human verdict:** Confirmed
+
+### #26 · Phase 1 · 2026-10-03
+- **What the AI got wrong:** `compress()` turned a 16-bit greyscale PNG pure white with no error, so Gemini would get a blank image and return garbage tags.
+- **Caught by:** AI, via a code reviewer (subagent), then reproduced.
+- **Fix / lesson:** Scale 16-bit modes to 8-bit first, with a test that brightness survives.
+- **Human verdict:** Confirmed
+
+### #27 · Phase 1 · 2026-10-03
+- **What the AI got wrong:** Tests were weaker than they looked: a mutation check found two deliberate bugs that passed everything, G2 using `any` instead of `all` (the test had one row) and `run()` never marking rows labelled (only hand-built rows were tested).
+- **Caught by:** AI, in its own mutation check (one in-memory bug at a time), after the review.
+- **Fix / lesson:** Added a two-row G2 test and a real-run test of the labelled flag. All 9 mutants are now caught.
+- **Human verdict:** Confirmed
+
+### #28 · Phase 1 · 2026-10-03
+- **What the AI got wrong:** Smaller problems in the first harness and tagger: failed calls lost their token counts; query matching treated `ramen_shop` as one word and ignored accents, unlike FTS5; a comment asserted, unverified, that Gemini writes fields in schema order.
+- **Caught by:** AI, via a code reviewer (subagent).
+- **Fix / lesson:** `TaggingError` carries `usage`. The tokenizer splits on underscores and folds accents. The schema sends `propertyOrdering`, and comments say the order is requested and checked in the spike.
+- **Human verdict:** Confirmed
+
+### #29 · Phase 2 · 2026-10-03
+- **What the AI got wrong:** `images` used `INTEGER PRIMARY KEY` without `AUTOINCREMENT`, so a deleted newest image's id was reused by the next upload, and a late tagging task for the deleted image could write its tags onto the new one.
+- **Caught by:** AI, in its own test run: a test with a wrong assumption failed, and tracing why showed the id reuse.
+- **Fix / lesson:** `AUTOINCREMENT`, plus tests that ids are never reused and a late result for a deleted image is discarded. Two tests fail with the old schema.
+- **Human verdict:** Confirmed
+
+### #30 · Phase 2 · 2026-10-03
+- **What the AI got wrong:** The first backend retried every 429 after 5 s and 15 s, including a daily quota that says to retry in about 11 hours, so each image held a tagging slot for 20 s for nothing.
+- **Caught by:** AI, in the live run against the real API, where all 7 uploads failed this way.
+- **Fix / lesson:** `_suggested_wait` reads Google's retry hint, and only waits of 30 s or less count as transient. Tests cover short, long, missing and unreadable hints.
+- **Human verdict:** Confirmed
+
+### #31 · Phase 2 · 2026-10-03
+- **What the AI got wrong:** A test expected an unreadable retry hint to mean "don't retry", contradicting the code's design (unreadable is as unknown as no hint).
+- **Caught by:** AI, when pytest failed.
+- **Fix / lesson:** Fixed the test, not the code. Decide the behaviour before writing the assertion.
+- **Human verdict:** Confirmed
+
+### #32 · Phase 2 · 2026-10-03
+- **What the AI got wrong:** Told the human "gemini-3.1-flash-lite is also capped at 20 requests per day" and wrote it into the README. Wrong: the probe didn't pass `--model`, so it ran on the `.env` model (`gemini-3.5-flash`). Flash-lite had made about 50 calls that day without a limit.
+- **Caught by:** AI, noticing 39 successful flash-lite calls contradicted a limit of 20, then re-running the probe with the model stated.
+- **Fix / lesson:** Corrected the README, a code comment and the spike results, and re-ran the live check with the model explicit (all 7 tagged in 17 s). Pass the model explicitly in every probe, and check a surprising result against what you know.
+- **Human verdict:** Confirmed
+
+### #33 · Phase 2–3 · 2026-10-03
+- **What the AI got wrong:** Robustness gaps in the first backend and UI: tagging shared the request thread pool and could starve the API; a failed database write left an image pending forever; a huge id caused a 500; AC-1's 60 s wasn't bounded; another site could POST uploads and spend the quota; and in the UI a slow old search could overwrite a newer one, timers stacked, the grid rebuilt every 2 s (losing focus and thumbnails), and polling stopped after one failed request.
+- **Caught by:** AI, via a fresh-context reviewer (subagent) on the finished backend and UI.
+- **Fix / lesson:** A dedicated 3-thread pool, guarded outcome recording, bounded ids, a 50 s retry deadline, an Origin check, a request counter, change detection and a retry timer, each with a test or browser check. A mutation check then found two new tests passing by accident, and those were fixed.
+- **Human verdict:** Confirmed

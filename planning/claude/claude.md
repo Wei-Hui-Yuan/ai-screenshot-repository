@@ -15,7 +15,7 @@ Claude Code checklist for this repo. The rules live in `planning/agents/agents.m
 - [ ] Unclear plan or out-of-scope idea? Stop and ask (§5).
 
 ## When corrected, or when you catch your own mistake
-- [ ] Append a row to `planning/corrections.md` with the verdict `Pending`, then ask the human for their verdict (§7).
+- [ ] Append an entry to `planning/corrections.md` with the verdict `Pending`, then ask the human for their verdict (§7).
 
 ## Before saying "done"
 - [ ] Run `pytest` and show the result. Name anything you didn't verify (§5).
