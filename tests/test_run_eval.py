@@ -464,6 +464,36 @@ def test_api_errors_record_only_the_code_and_status() -> None:
     assert SECRET not in json.dumps(info)
 
 
+QUOTA_DETAILS = {"error": {"code": 429, "message": SECRET, "status": "RESOURCE_EXHAUSTED", "details": [
+    {"@type": "type.googleapis.com/google.rpc.QuotaFailure", "violations": [{
+        "quotaMetric": "generativelanguage.googleapis.com/generate_content_free_tier_requests",
+        "quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier",
+        "quotaDimensions": {"location": "global", "model": "gemini-3.5-flash"}, "quotaValue": "20"}]},
+    {"@type": "type.googleapis.com/google.rpc.Help", "links": [{"description": SECRET}]},
+    {"@type": "type.googleapis.com/google.rpc.RetryInfo", "retryDelay": "31s"},
+]}}
+
+
+def test_a_429_records_which_quota_it_hit_but_never_the_message() -> None:
+    failure = TaggingError("rate_limit")
+    failure.__cause__ = errors.ClientError(429, QUOTA_DETAILS)
+
+    info = describe_error(failure)
+
+    assert info["quota_id"] == "GenerateRequestsPerDayPerProjectPerModel-FreeTier"
+    assert (info["quota_value"], info["quota_model"], info["retry_delay"]) == ("20", "gemini-3.5-flash", "31s")
+    assert SECRET not in json.dumps(info)
+
+
+def test_quota_fields_are_only_read_for_a_429_and_survive_odd_shapes() -> None:
+    other = TaggingError("other")
+    other.__cause__ = errors.ServerError(503, QUOTA_DETAILS)
+
+    assert "quota_id" not in describe_error(other)
+    for odd in (None, "text", {"error": {"details": "x"}}, {"error": {"details": [1, None, {"@type": 5}]}}):
+        assert run_eval.quota_info(odd) == {}
+
+
 def test_the_run_stops_after_repeated_rate_limits_and_keeps_what_it_has(workspace: Config) -> None:
     tag = Recorder(TaggingError("rate_limit"))
 

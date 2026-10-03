@@ -366,7 +366,26 @@ def describe_error(exc: Exception) -> dict[str, object]:
             "api_code": getattr(cause, "code", None),
             "api_status": getattr(cause, "status", None),
         }
+        if info["api_code"] == 429:
+            info |= quota_info(getattr(cause, "details", None))
     return info
+
+
+def quota_info(details: object) -> dict[str, object]:
+    """Which quota a 429 hit, from Google's structured error fields only (the
+    quota id says per-day or per-minute). The free-text message is never read."""
+    items = details.get("error", {}).get("details", []) if isinstance(details, dict) else []
+    found: dict[str, object] = {}
+    for item in items if isinstance(items, list) else []:
+        kind = str(item.get("@type", "")) if isinstance(item, dict) else ""
+        if kind.endswith("QuotaFailure") and item.get("violations"):
+            violation = item["violations"][0]
+            dimensions = violation.get("quotaDimensions") or {}
+            found |= {"quota_id": violation.get("quotaId"), "quota_value": violation.get("quotaValue"),
+                      "quota_model": dimensions.get("model")}
+        elif kind.endswith("RetryInfo"):
+            found["retry_delay"] = item.get("retryDelay")
+    return {k: v for k, v in found.items() if isinstance(v, (str, int))}
 
 
 def call_one(
@@ -413,7 +432,7 @@ def progress_line(n: int, total: int, row: Row, result: TagResult | None) -> str
     head = f"[{n:>2}/{total}] {row.image[:28]:<28} {row.size:>8} {row.seconds or 0:>6.1f}s{tries}  "
     if result is None:
         error = row.error or {}
-        keys = ("kind", "finish_reason", "api_code", "api_status")
+        keys = ("kind", "finish_reason", "api_code", "api_status", "quota_id", "quota_value", "retry_delay")
         detail = " ".join(f"{k}={error[k]}" for k in keys if error.get(k))
         return f"{head}FAILED {error.get('type')} {detail}".rstrip()
     place = ", ".join(p for p in (result.city, result.country) if p) or "-"
