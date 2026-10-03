@@ -203,3 +203,33 @@ Every time the AI gets something wrong, whoever catches it, it goes here. Rules 
 - **Caught by:** AI, via a fresh-context reviewer (subagent) on the finished backend and UI.
 - **Fix / lesson:** A dedicated 3-thread pool, guarded outcome recording, bounded ids, a 50 s retry deadline, an Origin check, a request counter, change detection and a retry timer, each with a test or browser check. A mutation check then found two new tests passing by accident, and those were fixed.
 - **Human verdict:** Confirmed
+
+### #34 · Docs cleanup · 2026-10-03
+- **What the AI got wrong:** Asked which docs were problematic, suggested "rewrite or remove" the two phase plans. It did not say that the brief requires agent plans in `planning/` (see #15), or that the plans hold the verified facts and decisions behind #12 to #22.
+- **Caught by:** Human, who asked why deletion was suggested.
+- **Fix / lesson:** Rewrote both in a neutral voice and kept all their content. Before proposing to delete a file, check whether a requirement or another doc depends on it.
+- **Human verdict:** Confirmed
+
+### #35 · Docs cleanup · 2026-10-03
+- **What the AI got wrong:** Offered to change the "voice" of the 33 corrections. That would have altered text the human had confirmed, and goes against §7 ("don't tidy the story").
+- **Caught by:** AI, on re-reading §7 before editing.
+- **Fix / lesson:** Asked the human first. The human chose a layout change, then condensing. The entries were condensed with numbers, dates, phases, who caught each mistake and the verdicts unchanged, a note added at the top, and the long form linked.
+- **Human verdict:** Confirmed
+
+### #36 · Docs cleanup · 2026-10-03
+- **What the AI got wrong:** Estimated that `design.md` would shrink to about 125 lines. The rewrite came out at 231, longer than the original 223. The first condensed corrections were also only 5% shorter, not the concise version asked for.
+- **Caught by:** AI, by counting lines and words after each rewrite.
+- **Fix / lesson:** Reported the real numbers to the human. `design.md` stayed because it now separates what was built from what was deferred. The corrections were tightened again and ended 16% shorter. Measure before claiming a size.
+- **Human verdict:** Confirmed
+
+### #37 · Docs cleanup · 2026-10-03
+- **What the AI got wrong:** Trimming `design.md` section 4 removed the five-category list that the phase 1 plan cites by section number.
+- **Caught by:** AI, while checking which files cite `design.md` sections.
+- **Fix / lesson:** Restored the list in the chips note. Search for citations before cutting a section.
+- **Human verdict:** Confirmed
+
+### #38 · Docs cleanup · 2026-10-04
+- **What the AI got wrong:** Did not log #34 to #37 when they happened, as §7 requires. They were added at the final check.
+- **Caught by:** AI, at the final check against the repo's own rules.
+- **Fix / lesson:** Logged all four together. Log each correction when it happens.
+- **Human verdict:** Confirmed

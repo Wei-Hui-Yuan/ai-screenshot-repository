@@ -1,6 +1,17 @@
 # planning/: where to start
 
-Everything here was written during one working day, 2026-10-03. Read in this order.
+Written on 2026-10-03, apart from the final check on 2026-10-04.
+
+## The short version
+- **What it is.** A local web app: drop in screenshots, Gemini tags each one, and a search word finds them. v1 also answers one question: how well does Gemini tag real screenshots? ([spike-results.md](spike-results.md))
+- **AI tools.** Claude Code was the main coding agent. It drafted the plans, wrote the code and tests, and ran the checks. The owner chose the problem, set the scope, wrote the eval labels, and approved every plan, commit and correction. Gemini is the model inside the app, not a development tool.
+- **Where the AI helped.** Reviewer subagents, which read the work without seeing the author's reasoning, caught 22 of the 33 mistakes logged during the build. A live run against the real API caught the quota problem (#30).
+- **Where it failed.** Facts taken from memory or from a summary (#12, #19, #32), tests with wrong expectations (#23, #31), and gaps in the first designs (#6, #9, #10). All are in [corrections.md](corrections.md), with how each was caught and fixed.
+- **What was deferred.** Category and place chips, "Load more", a separate detail page, toasts and per-card polling. They were postponed for time and to keep v1 a proof of concept. See [02-mvp-outcome.md](project_plan/02-mvp-outcome.md).
+- **Weakest part.** The evidence on tag quality is thin: the prompt was tuned and judged on the same 7 synthetic and 5 real images, and the hold-out evaluation was not run. The place-recall criterion (AC-3) stays provisional.
+- **Next.** Run the hold-out evaluation on 15 to 20 real screenshots, build the deferred UI features, make tagging aware of free-tier quotas (or move to a paid tier), then manual tag editing. ([01-full-plan.md](project_plan/01-full-plan.md) §10)
+
+## Reading order
 
 | # | Document | Status | What it tells you |
 |---|---|---|---|
