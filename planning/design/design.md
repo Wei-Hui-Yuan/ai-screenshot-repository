@@ -1,5 +1,7 @@
 # Design: AI Screenshot Repository
 
+> **MVP scope (2026-10-03).** Built as one page (`app/static/index.html`). **Superseded:** §3 (one page, no second route, no `pageshow` handling), §4 chips and "Load more", §5 as a page (it is a `<dialog>`), §6 toasts, per-card polling and the cap rules (one status line and one alert line; the grid re-fetches every 2 s while a card is pending). Colour tokens, card states, "data is text, never HTML" and the fixed server messages are unchanged. See `planning/phase_plans/mvp.md`.
+
 How the app looks and behaves on screen. Scope, routes and data rules live in `planning/project_plan/projectplan.md`. This file covers only the UI.
 
 ## 1. Principles

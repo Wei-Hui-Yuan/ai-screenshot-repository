@@ -1,5 +1,7 @@
 # Project Plan: AI Screenshot Repository
 
+> **MVP scope (2026-10-03).** v1 was cut for time. See `planning/phase_plans/mvp.md`. **Cut:** category and place chips and `GET /api/facets` (F4, journey J3), the `/image/{id}` page (the detail view is a dialog on `/`), "Load more" (newest 40), toasts, per-card polling, the hold-out evaluation. **Changed:** the model is `gemini-3.1-flash-lite`, and demo and eval data is the synthetic set from `eval/make_synthetic.py`. The free tier allows 20 requests per day per model (`planning/spike-results.md`). The sections below describe the original scope.
+
 ## 1. Product overview
 **Problem.** I screenshot things to remember them (places, food, recipes, articles, receipts) and then can't find them again. Many are social-media posts that can't be fetched through any API, so the screenshot is the only copy.
 
